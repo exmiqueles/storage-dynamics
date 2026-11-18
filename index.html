@@ -1,0 +1,852 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Ibirá Storage · Synchrotron Usage Management</title>
+<style>
+:root{--bg:#f6f5f1;--ink:#1d2430;--mute:#6b7280;--card:#fff;--line:#e3e1da;--data:#2f6fb0;--back:#8fd0ee;--proc:#e08a2e;--red:#d0342c;--ok:#2a8a5a;--sem:#a5432f;--com:#2f7a5a}
+*{box-sizing:border-box}
+body{margin:0;font:14px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--ink)}
+header{padding:14px 16px 0;max-width:1680px;margin:0 auto;display:flex;align-items:center;gap:16px}header .logo{height:38px;width:auto;flex:none}header .htxt{min-width:0}
+h1{font-size:18px;margin:0}
+.sub{color:var(--mute);font-size:12.5px}
+main{padding:0 16px 24px;max-width:1680px;margin:0 auto;display:grid;grid-template-columns:minmax(0,1fr);gap:0 14px;align-items:start}
+.ph2{font-size:13.5px;margin:0 0 6px}
+.qctl{grid-column:span 2}.qrow{display:grid;grid-template-columns:86px 1fr 56px;gap:6px;align-items:center;font-size:11.5px;color:var(--mute)}.qrow b{color:var(--ink);text-align:right}.qrow input{height:14px;margin:0}
+@media(max-width:700px){.qctl{grid-column:auto}}
+.controls.compact{grid-template-columns:1fr 1fr;gap:4px 12px}
+.controls.compact .ctl label{font-size:11px}
+.controls.compact input[type=range]{height:14px;margin:0}
+.eq{font-family:"Latin Modern Roman","Cambria Math",Cambria,"Times New Roman",serif;font-size:13.5px;line-height:1.55;margin:3px 0 7px;padding-left:8px;border-left:2px solid var(--line)}
+.eq i{font-style:italic}
+.eqh{font-size:11.5px;color:var(--mute);margin-top:6px}
+.frac{display:inline-flex;flex-direction:column;vertical-align:middle;text-align:center;font-size:90%}
+.frac>span:first-child{border-bottom:1px solid currentColor;padding:0 2px}
+@media(max-width:1150px){main{grid-template-columns:1fr}}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-top:10px}
+.controls{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px 18px;align-items:end}
+.ctl label{display:flex;justify-content:space-between;gap:6px;font-size:12.5px;color:var(--mute)}
+.ctl label b{color:var(--ink);white-space:nowrap}
+.ctl input[type=range]{width:100%}
+.hint{font-size:11.5px;color:var(--mute)}
+button{font:inherit;border:1px solid var(--line);background:#fff;border-radius:8px;padding:5px 10px;cursor:pointer}
+
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}.seg button{border:0;border-radius:0}.seg button.on{background:var(--ink);color:#fff}
+#plantwrap{position:relative}#side.float{position:absolute}#side .legend{margin:0 0 2px}
+button.primary{background:var(--ink);color:#fff;border-color:var(--ink)}
+button.orion{background:#5b3b8c;color:#fff;border-color:#5b3b8c}
+.timebar{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.timebar input{flex:1;min-width:160px}
+.date{font-weight:600;min-width:110px}
+canvas{display:block;width:100%}
+.cards{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.col h3{margin:2px 0 6px;font-size:13px}
+.col.sem h3{color:var(--sem)} .col.com h3{color:var(--com)}
+.cardgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:6px}
+.card{border:1px solid var(--line);border-radius:8px;padding:6px 8px}
+.card .k{font-size:11px;color:var(--mute)}
+.card .v{font-size:16px;font-weight:600}
+.card .s{font-size:11px;color:var(--mute)}
+.bad{color:var(--red)!important} .good{color:var(--ok)!important}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--mute);margin:4px 2px}
+.sw{display:inline-block;width:12px;height:12px;border-radius:3px;vertical-align:-2px;margin-right:4px}
+.hatch{background:repeating-linear-gradient(45deg,#2f6fb0 0 3px,#bcd3ec 3px 6px)}
+#pop{position:absolute;display:none;background:#fff;border:1px solid var(--line);border-radius:10px;box-shadow:0 6px 20px rgba(0,0,0,.15);padding:10px;z-index:10;width:240px}
+#pop h4{margin:0 0 2px;font-size:14px}
+#pop .row{display:flex;gap:6px;margin-top:8px}
+#pop .row button{flex:1}
+.mono{font-family:ui-monospace,Menlo,monospace;font-size:11px;white-space:pre-wrap;color:#333}
+footer{font-size:11.5px;color:var(--mute);margin-top:10px}
+@media(max-width:700px){.cards{grid-template-columns:1fr}}
+
+.model{max-width:1680px;margin:0 auto;padding:0 16px 30px}
+.mh{font-size:18px;margin:2px 0 4px}.mh3{font-size:14px;margin:0 0 6px}
+.mlead{color:#3d4552;max-width:900px;margin:0 0 8px}
+.flowwrap{overflow-x:auto}.flowsvg{width:100%;height:auto;max-height:340px;display:block;margin:4px 0 10px}.fhint{display:none}@media(max-width:800px){.flowsvg{width:820px;max-width:none}.fhint{display:block;margin:-6px 0 8px}}
+.flowsvg text,.minisvg text{font:13px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+.t-w{fill:#fff}.t-b{font-weight:700}.t-big{font-size:22px!important;font-weight:700;font-style:italic}.t-mute{fill:#6b7280;font-size:11.5px!important}.t-red{fill:#d0342c;font-size:11.5px!important}
+.t-eq{font-family:"Cambria Math",Cambria,"Times New Roman",serif!important;font-style:italic;font-size:15px!important;fill:#1d2430}.t-sm{font-size:11.5px!important}
+.mgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}@media(max-width:1100px){.mgrid{grid-template-columns:1fr 1fr}}@media(max-width:700px){.mgrid{grid-template-columns:1fr}}
+.mcard{border:1px solid var(--line);border-radius:10px;padding:10px 12px;position:relative;background:#fff}
+.mcard h3{font-size:14px;margin:0 0 4px 30px}.mcard p{font-size:12.5px;color:#3d4552;margin:0 0 6px}
+.mnum{position:absolute;left:10px;top:9px;width:22px;height:22px;border-radius:50%;background:var(--ink);color:#fff;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center}
+.onde{font-size:11.5px;color:var(--com);margin-top:4px}
+.mgrid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:0 12px}
+.mp{font-size:12.5px;color:#3d4552;margin:4px 0}
+.minisvg{width:100%;max-width:360px;height:auto;display:block;margin:2px auto 4px}
+.bolso-row{display:flex;justify-content:space-between;gap:8px;font-size:12.5px;padding:4px 0;border-bottom:1px dashed var(--line)}
+.bolso-row b{white-space:nowrap}
+.ptab{width:100%;border-collapse:collapse;font-size:12.5px;margin-top:6px}.ptab th{text-align:left;color:var(--mute);font-weight:600;border-bottom:1px solid var(--line);padding:4px 6px}
+.ptab td{border-bottom:1px dashed var(--line);padding:6px;vertical-align:top;color:#3d4552}.ptab td:first-child{white-space:nowrap}
+.tag{display:inline-block;font-size:11px;border-radius:10px;padding:1px 8px;white-space:nowrap}.tag.pol{background:#e3efe8;color:#2f7a5a}.tag.inf{background:#e6edf6;color:#2f5f9a}.tag.med{background:#e9e4f3;color:#5b3b8c}.tag.pre{background:#f4ece0;color:#9a6a2a}
+@media(max-width:700px){.ptab td:first-child{white-space:normal}}
+.syspanel{border:2px solid var(--ink)}
+.sysgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:6px}@media(max-width:1000px){.sysgrid{grid-template-columns:1fr}}
+.syslab{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--mute);margin-bottom:2px}
+.eq.big{font-size:15px;line-height:1.8}
+.alerta{background:#fff4e5;border:1px solid #f0c27a;border-radius:8px;padding:7px 10px;margin-bottom:8px;font-size:13px}.alic{color:#c26b00;font-size:15px}
+.ctlpanel{display:grid;grid-template-columns:1fr 1fr;gap:0 26px}@media(max-width:900px){.ctlpanel{grid-template-columns:1fr}}
+.grp{border-left:3px solid var(--line);padding-left:12px}.grp.pol{border-color:#2f7a5a}.grp.inf{border-color:#2f5f9a}.grp.pre{border-color:#c9963f}
+.gh{font-size:13.5px;margin:2px 0 8px;display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}.ghs{font-weight:400;font-size:11.5px;color:var(--mute)}
+.grp .controls{grid-template-columns:repeat(auto-fill,minmax(230px,1fr));align-items:start;gap:12px 22px}
+.grp .ctl label span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.grp .ctl input[type=range]{margin:6px 0 2px}.grp .ctl select{width:100%;margin:5px 0 2px}
+.grp .qctl{grid-column:1/-1}.grp .qrow{grid-template-columns:96px 1fr 56px;margin-top:2px}
+.inrow{display:flex;gap:6px;align-items:center;margin:4px 0 2px}.inrow input{width:80px}.inrow select{width:auto!important;margin:0!important}
+.lsel{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;margin:6px 0 8px}
+.lbtns button{font-size:12px;padding:3px 9px;margin-right:4px}
+.seg2{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}.seg2 button{border:0;border-radius:0;font-size:12px;padding:3px 9px}.seg2 button.on{background:var(--ink);color:#fff}
+#lchips{display:flex;flex-wrap:wrap;gap:4px}
+.lchip{font:600 11px/1 -apple-system,Segoe UI,sans-serif;padding:5px 7px;border-radius:6px;border:1.5px solid transparent;cursor:pointer;user-select:none;color:#13233a;background:#eceae4;opacity:.55}
+.lchip.on{opacity:1;color:#fff;border-color:rgba(0,0,0,.15)}
+.grp .controls.c4{grid-template-columns:repeat(4,minmax(0,1fr))}@media(max-width:1000px){.grp .controls.c4{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.subgh{font-size:12px;font-weight:600;color:var(--mute);margin:14px 0 6px;padding-top:10px;border-top:1px dashed var(--line)}
+.grp .ctl input[type=range],.grp .ctl select{height:24px;box-sizing:border-box;margin:6px 0 4px}
+</style>
+</head>
+<body>
+<header>
+  <img class="logo" alt="CNPEM" src="data:image/png;base64,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">
+  <div class="htxt"><h1>Ibirá Storage · Synchrotron Usage Management</h1>
+  <div class="sub">A dynamical stock-and-flow model of the synchrotron share of the storage. Both tanks receive the same proposals from the beamlines; only the rule for what leaves the disk changes. They start with <span class="u0txt">3.24</span> PB in use, within the capacity set under Infrastructure.</div></div>
+</header>
+
+<main>
+<section>
+  <div class="panel ctlpanel">
+    <div class="grp pol">
+      <h2 class="gh"><span class="tag pol">usage rule</span> Usage rules <span class="ghs">decided by the institution</span></h2>
+      <div class="controls">
+        <div class="ctl"><label><span>Retention on disk</span> <b id="o-ret"></b></label><input id="ret" type="range" min="6" max="60" step="3" value="24"><div class="hint">after this, raw data go to tape and proc/ is deleted</div></div>
+        <div class="ctl"><label><span>Notice before deletion</span> <b id="o-aviso"></b></label><input id="aviso" type="range" min="0" max="26" step="1" value="8"><div class="hint">when expired proc/ starts being deleted</div></div>
+        <div class="ctl"><label><span>Operational limit</span> <b id="o-lim"></b></label><input id="lim" type="range" min="0.7" max="0.98" step="0.01" value="0.9"><div class="hint">above it, emergency cleanup; purchase alert 1 year earlier</div></div>
+        <div class="ctl qctl"><label><span>proc/ quota per proposal, by profile</span></label>
+          <div class="qrow"><span>heavy</span><input id="q-pesada" type="range" min="0.1" max="30" step="0.1" value="10"><b id="o-q-pesada"></b></div>
+          <div class="qrow"><span>medium-heavy</span><input id="q-mpesada" type="range" min="0.1" max="30" step="0.1" value="5"><b id="o-q-mpesada"></b></div>
+          <div class="qrow"><span>medium</span><input id="q-media" type="range" min="0.1" max="30" step="0.1" value="2"><b id="o-q-media"></b></div>
+          <div class="qrow"><span>light</span><input id="q-leve" type="range" min="0.1" max="30" step="0.1" value="0.5"><b id="o-q-leve"></b></div>
+          <div class="qrow"><span>Orion</span><input id="q-orion" type="range" min="0.1" max="30" step="0.1" value="10"><b id="o-q-orion"></b></div>
+          <div class="hint">applies to new proposals; raw data never have a quota; click a beamline to change its profile</div></div>
+      </div>
+    </div>
+    <div class="grp inf">
+      <h2 class="gh"><span class="tag inf">infra</span> Infrastructure <span class="ghs">managed by the infrastructure team</span></h2>
+      <div class="controls">
+        <div class="ctl"><label><span>Tape drives (LTO-9 writers)</span> <b id="o-drives"></b></label><input id="drives" type="range" min="0" max="10" step="1" value="1"><div class="hint" id="h-fita"></div></div>
+        <div class="ctl"><label><span>Drive efficiency</span> <b id="o-ef"></b></label><input id="ef" type="range" min="0.02" max="0.9" step="0.01" value="0.5"><div class="hint">fraction of the 400 MB/s sustained (tape changes, verification, small files)</div></div>
+        <div class="ctl"><label><span>Recall link</span> <b id="o-volta"></b></label><input id="volta" type="range" min="0" max="60" step="1" value="10"><div class="hint" id="h-volta"></div></div>
+        <div class="ctl"><label><span>Recall delay</span> <b id="o-atraso"></b></label><input id="atraso" type="range" min="1" max="30" step="1" value="5"><div class="hint">from request until data are back on disk</div></div>
+        <div class="ctl"><label><span>Synchrotron share today</span> <b id="o-livre"></b></label><div class="inrow"><input id="vcap" type="number" min="0.1" max="50" step="0.01" value="4.47"><span class="hint">PB total</span><input id="vuso" type="number" min="0.01" max="50" step="0.01" value="3.24"><span class="hint">PB used</span></div><div class="hint" id="h-cap">default: 2.68 PB beamlines + 0.56 general</div></div>
+        <div class="ctl"><label><span>LTO-9 cartridge cost</span></label><div class="inrow"><select id="moeda"><option value="USD" selected>US$</option><option value="BRL">R$</option></select><input id="preco" type="number" min="0" step="5" value="150"><select id="copias"><option value="1">1 copy</option><option value="2">2 copies</option></select></div><div class="hint">example price (18 TB native per cartridge); the cost shown under the tape archive is for the media only, accumulated up to the date shown</div></div>
+      </div>
+    </div>
+  </div>
+  <div class="panel">
+    <div class="grp pre">
+      <h2 class="gh"><span class="tag pre">assumption</span> Input scenario <span class="ghs">what nobody knows for sure: move them to see how much the answer changes</span></h2>
+      <div class="controls c4">
+        <div class="ctl"><label><span>Future growth, doubling every</span> <b id="o-dobraF"></b></label><input id="dobraF" type="range" min="1" max="15" step="0.5" value="5"><div class="hint">growth of the input from now on</div></div>
+        <div class="ctl"><label><span>Processed fraction</span> <b id="o-fp"></b></label><input id="fp" type="range" min="0.1" max="0.85" step="0.01" value="0.68"><div class="hint">share of the input that is proc/ (on disk today: 68%)</div></div>
+        <div class="ctl"><label><span>In operation for</span> <b id="o-idade"></b></label><input id="idade" type="range" min="2" max="7" step="0.5" value="4.5"><div class="hint">the past is rebuilt to match today's usage</div></div>
+        <div class="ctl"><label><span>Recall requests</span> <b id="o-pv"></b></label><input id="pv" type="range" min="0" max="0.02" step="0.001" value="0.003"><div class="hint">chance per proposal on tape, per week</div></div>
+      </div>
+      <div class="subgh">Orion beamlines (SIB, TIB, HIB)</div>
+      <div class="controls c4">
+        <div class="ctl"><label><span>Start of operation</span></label><select id="orion"></select><div class="hint" id="h-orion"></div></div>
+        <div class="ctl"><label><span>Full rate, per beamline</span> <b id="o-orionTB"></b></label><input id="orionTB" type="range" min="0.5" max="20" step="0.5" value="5"><div class="hint">input of each of SIB, TIB and HIB at full operation</div></div>
+        <div class="ctl"><label><span>Ramp-up</span> <b id="o-orionRampa"></b></label><input id="orionRampa" type="range" min="0.25" max="4" step="0.25" value="2"><div class="hint">years from 10% to 90% of the full rate (logistic)</div></div>
+      </div>
+    </div>
+  </div>
+  <div class="panel">
+    <div id="alerta" class="alerta"></div>
+    <div class="timebar">
+      <button id="play" class="primary">▶ Run</button>
+      <button id="reset">⟲ start</button>
+      <label for="speed" class="hint" title="Only the speed of the animation: the results do not change">playback speed</label><select id="speed" title="Only the speed of the animation: the results do not change"><option value="1">1 week per second</option><option value="3">3 weeks per second</option><option value="8" selected>8 weeks per second</option><option value="20">20 weeks per second</option></select>
+      <span class="date" id="date"></span><span class="seg"><button data-v="linha" class="on">by beamline</button><button data-v="tipo">by stock</button></span>
+      <input id="scrub" type="range" min="0" max="476" step="0.01" value="0">
+    </div>
+    <div id="plantwrap"><canvas id="plant"></canvas>
+      <div id="side">
+        <div class="legend"><b style="color:var(--ink)">Occupation over time</b>
+          <span><i class="sw" style="background:var(--sem);opacity:.6"></i>without usage rule</span>
+          <span><i class="sw" style="background:var(--com);opacity:.6"></i>with usage rule</span>
+          <span>band: 80% of futures · ⚠ = purchase alert</span></div>
+        <canvas id="chart"></canvas>
+        <div class="legend" style="margin-top:6px"><b style="color:var(--ink)">Raw-data flows, with usage rule</b> <span>TB/week, 4-week average</span></div>
+        <div class="legend" style="font-size:11px;gap:10px">
+          <span><i class="sw" style="height:2px;background:#2f6fb0"></i>input <i>J<sub>D</sub></i>(<i>t</i>)</span>
+          <span><i class="sw" style="height:2px;background:repeating-linear-gradient(90deg,#2f6fb0 0 4px,transparent 4px 7px)"></i>expiring <i>J<sub>D</sub></i>(<i>t</i>−<i>R</i>)</span>
+          <span><i class="sw" style="height:2px;background:#1d2430"></i>to tape φ<sub>w</sub></span>
+          <span><i class="sw" style="height:2px;background:#4aa8d8"></i>recalled φ<sub>b</sub></span>
+          <span><i class="sw" style="height:2px;background:repeating-linear-gradient(90deg,#d0342c 0 5px,transparent 5px 8px)"></i>capacity <i>W</i></span></div>
+        <canvas id="flows"></canvas>
+      </div>
+    </div>
+    <div class="legend" id="leg-linha">
+      <span>each rectangle = one beamline; area = how much it occupies on disk</span>
+      <span><i class="sw" style="background:hsl(212,60%,30%)"></i>dark = raw (data/)</span>
+      <span><i class="sw" style="background:hsl(212,50%,60%)"></i>light = processed (proc/)</span>
+      <span><i class="sw" style="background:var(--red)"></i>operational limit (90%)</span>
+      <span>click a box to inspect the beamline</span>
+    </div>
+    <div class="legend" id="leg-tipo" style="display:none">
+      <span><i class="sw" style="background:var(--data)"></i>raw within retention (<i>S</i>)</span>
+      <span><i class="sw hatch"></i>expired raw, queued for tape (<i>F</i>)</span>
+      <span><i class="sw" style="background:var(--back)"></i>raw recalled from tape (<i>B</i>)</span>
+      <span><i class="sw" style="background:var(--proc)"></i>processed, proc/ (<i>P</i>)</span>
+      <span><i class="sw" style="background:var(--red)"></i>operational limit (90%)</span>
+      <span>click a box to inspect the beamline</span>
+    </div>
+  </div>
+  <div class="panel">
+    <h2 class="gh" style="margin-bottom:4px">Beamline by beamline <span class="ghs">disk occupied by each beamline (raw + proc/) in one of the simulated futures · solid = without usage rule, dashed = with usage rule</span></h2>
+    <div class="lsel">
+      <span class="lbtns"><button data-p="todas">all</button><button data-p="nenhuma">none</button><button data-p="pesadas">heavy</button><button data-p="top4">top 4</button></span>
+      <span class="seg2"><button data-m="sep" class="on">separate</button><button data-m="soma">summed</button></span>
+      <span id="lchips"></span>
+    </div>
+    <canvas id="linechart"></canvas>
+    <div class="hint" id="lc-hint"></div>
+  </div>
+  <div class="panel cards">
+    <div class="col sem"><h3>WITHOUT USAGE RULE (as today)</h3><div class="cardgrid" id="cards0"></div></div>
+    <div class="col com"><h3>WITH USAGE RULE (retention + quota + tape)</h3><div class="cardgrid" id="cards1"></div></div>
+  </div>
+
+  <footer id="foot"></footer>
+</section>
+</main>
+<section class="model" id="modelo">
+  <div class="panel">
+    <h2 class="mh">How the model works</h2>
+    <p class="mlead">The storage can be pictured as a tank with four compartments. What comes in is produced by the beamlines; what goes out depends on the <b>usage rules</b>. The diagram shows what the simulation does on average, and each quantity is a piece you can change with the controls.</p>
+    <div class="flowwrap"><svg viewBox="0 0 1200 312" class="flowsvg" role="img" aria-label="Stock-and-flow diagram of the model">
+ <defs>
+  <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#555"/></marker>
+  <marker id="ahr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#d0342c"/></marker>
+  <pattern id="hp" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="8" height="8" fill="#bcd3ec"/><rect width="3" height="8" fill="#2f6fb0"/></pattern>
+ </defs>
+ <rect x="200" y="14" width="690" height="272" rx="14" fill="#fbfaf7" stroke="#999" stroke-dasharray="6 4"/>
+ <text x="215" y="34" class="t-mute">Ibirá disk · synchrotron capacity V · occupation U = S + F + B + P</text>
+ <line x1="200" y1="58" x2="890" y2="58" stroke="#d0342c" stroke-dasharray="6 4" opacity=".5"/><text x="884" y="53" text-anchor="end" class="t-red">limit αV</text>
+ <!-- fonte -->
+ <rect x="20" y="110" width="140" height="90" rx="10" fill="#e9e6dd"/>
+ <text x="90" y="145" text-anchor="middle" class="t-b">beamlines</text><text x="90" y="164" text-anchor="middle" class="t-mute">new proposals</text><text x="90" y="181" text-anchor="middle" class="t-mute">every week</text>
+ <!-- S -->
+ <rect x="250" y="75" width="180" height="80" rx="8" fill="#2f6fb0"/>
+ <text x="340" y="108" text-anchor="middle" class="t-w t-big">S</text><text x="340" y="132" text-anchor="middle" class="t-w">raw within retention</text>
+ <!-- F -->
+ <rect x="530" y="75" width="150" height="80" rx="8" fill="url(#hp)"/>
+ <rect x="550" y="88" width="110" height="52" rx="6" fill="#fff" opacity=".88"/><text x="605" y="110" text-anchor="middle" class="t-big" style="fill:#13233a">F</text><text x="605" y="131" text-anchor="middle" style="fill:#13233a">tape queue</text>
+ <!-- P -->
+ <rect x="250" y="190" width="180" height="80" rx="8" fill="#e08a2e"/>
+ <text x="340" y="223" text-anchor="middle" class="t-w t-big">P</text><text x="340" y="247" text-anchor="middle" class="t-w">proc/</text>
+ <!-- B -->
+ <rect x="720" y="190" width="150" height="80" rx="8" fill="#8fd0ee"/>
+ <text x="795" y="223" text-anchor="middle" class="t-big" style="fill:#13233a">B</text><text x="795" y="247" text-anchor="middle" style="fill:#13233a">recalled</text>
+ <!-- apagado -->
+ <rect x="530" y="200" width="150" height="60" rx="8" fill="none" stroke="#aaa" stroke-dasharray="4 3"/>
+ <text x="605" y="226" text-anchor="middle" class="t-mute">deleted</text><text x="605" y="243" text-anchor="middle" class="t-mute">(proc/ never goes to tape)</text>
+ <!-- fita -->
+ <rect x="985" y="70" width="190" height="90" rx="10" fill="#4b4f58"/>
+ <text x="1080" y="105" text-anchor="middle" class="t-w t-b">TAPE Archive</text><text x="1080" y="125" text-anchor="middle" class="t-w">external tape library</text><text x="1080" y="143" text-anchor="middle" class="t-w" opacity=".8">keeps the copy</text>
+ <!-- setas -->
+ <path d="M160,140 C200,130 215,118 248,115" stroke="#555" stroke-width="2.5" fill="none" marker-end="url(#ah)"/>
+ <text x="196" y="104" text-anchor="middle" class="t-eq">J<tspan baseline-shift="sub" font-size="10">D</tspan>(t)</text>
+ <path d="M160,172 C200,185 215,222 248,228" stroke="#555" stroke-width="2.5" fill="none" marker-end="url(#ah)"/>
+ <text x="196" y="232" text-anchor="middle" class="t-eq">J<tspan baseline-shift="sub" font-size="10">P</tspan>(t)</text>
+ <line x1="430" y1="115" x2="527" y2="115" stroke="#555" stroke-width="2.5" marker-end="url(#ah)"/>
+ <text x="478" y="104" text-anchor="middle" class="t-eq">J<tspan baseline-shift="sub" font-size="10">D</tspan>(t−R)</text><text x="478" y="138" text-anchor="middle" class="t-mute">expires (age R)</text>
+ <line x1="680" y1="108" x2="980" y2="108" stroke="#c9c5ba" stroke-width="16"/>
+ <line x1="680" y1="108" x2="978" y2="108" stroke="#1d2430" stroke-width="3" marker-end="url(#ah)"/>
+ <text x="830" y="92" text-anchor="middle" class="t-eq">φ<tspan baseline-shift="sub" font-size="10">w</tspan> ≤ W</text><text x="830" y="135" text-anchor="middle" class="t-mute">wide pipe: drives writing</text>
+ <path d="M1030,160 C1010,215 940,230 873,230" stroke="#c9c5ba" stroke-width="5" fill="none"/>
+ <path d="M1030,160 C1010,215 940,230 875,230" stroke="#4aa8d8" stroke-width="2" fill="none" marker-end="url(#ah)"/>
+ <text x="1010" y="232" text-anchor="middle" class="t-eq">φ<tspan baseline-shift="sub" font-size="10">b</tspan> ≤ W<tspan baseline-shift="sub" font-size="10">b</tspan></text><text x="1010" y="250" text-anchor="middle" class="t-mute">narrow pipe, delay L</text>
+ <line x1="795" y1="270" x2="795" y2="300" stroke="#555" stroke-width="2" marker-end="url(#ah)"/><text x="805" y="297" class="t-mute">leaves after 8 weeks</text>
+ <line x1="430" y1="222" x2="527" y2="222" stroke="#555" stroke-width="2.5" marker-end="url(#ah)"/>
+ <text x="478" y="212" text-anchor="middle" class="t-eq">J<tspan baseline-shift="sub" font-size="10">P</tspan>(t−R)</text>
+ <path d="M360,270 C370,292 570,292 600,263" stroke="#d0342c" stroke-width="2" stroke-dasharray="5 3" fill="none" marker-end="url(#ahr)"/>
+ <text x="480" y="304" text-anchor="middle" class="t-red">emergency cleanup if U &gt; αV</text>
+</svg><div class="hint fhint">scroll sideways to see the whole diagram</div></div>
+    <div class="mgrid">
+      <div class="mcard"><div class="mnum">1</div><h3>Input</h3><p>Every week the beamlines send proposals. The volume grows, doubling every <i>T<sub>f</sub></i> (“future growth”). The processed data are a fraction of the raw data, capped by the quota.</p><div class="eq"><i>J</i><sub>D</sub>(<i>t</i>) = <i>J</i><sub>D</sub>(0) · 2<sup><i>t</i>/<i>T<sub>f</sub></i></sup><br><i>J</i><sub>P</sub>(<i>t</i>) ≈ <i>r̄</i> <i>J</i><sub>D</sub>(<i>t</i>), &nbsp; proc/ per proposal ≤ <i>Q</i></div><div class="onde">in the widget: the drops; the blue “input” curve in the flow chart</div></div>
+      <div class="mcard"><div class="mnum">2</div><h3>Retention is a delay</h3><p>What expires today is what came in <i>R</i> weeks ago. The amount on disk does not matter: the outflow only looks at age.</p><div class="eq"><span class="frac"><span>d<i>S</i></span><span>d<i>t</i></span></span> = <i>J</i><sub>D</sub>(<i>t</i>) − <i>J</i><sub>D</sub>(<i>t</i> − <i>R</i>)</div><div class="onde">in the widget: the dashed “expiring” curve</div></div>
+      <div class="mcard"><div class="mnum">3</div><h3>Queue and tape</h3><p>Expired raw data join the queue, and the drives write at most <i>W</i> per week. If more expires than the tape can write, the queue grows.</p><div class="eq"><span class="frac"><span>d<i>F</i></span><span>d<i>t</i></span></span> = <i>J</i><sub>D</sub>(<i>t</i> − <i>R</i>) − φ<sub>w</sub><br>φ<sub>w</sub> = min{ <i>W</i> − φ<sub>b</sub>, <i>F</i> }<br><i>W</i> = <i>n</i><sub>drives</sub> · η · 242 TB/week</div><div class="onde">in the widget: the wide pipe, the hatched band (“by stock”) and the “Tape queue” card</div></div>
+      <div class="mcard"><div class="mnum">4</div><h3>Recalls from tape</h3><p>Recall requests go through a narrow pipe, arrive after a delay <i>L</i> and use the same drives. The data stay on disk for 8 weeks and then leave; the copy remains on tape.</p><div class="eq"><span class="frac"><span>d<i>B</i></span><span>d<i>t</i></span></span> = φ<sub>b</sub>(<i>t</i>) − φ<sub>b</sub>(<i>t</i> − 8)<br>φ<sub>b</sub> = min{ <i>W<sub>b</sub></i>, requests(<i>t</i> − <i>L</i>) }</div><div class="onde">in the widget: the narrow pipe, the small cart and the “Recall requests” card</div></div>
+      <div class="mcard"><div class="mnum">5</div><h3>proc/ never goes to tape</h3><p>Processed data can be recomputed: at the end of the retention period they are deleted (after a notice). Without a usage rule, they only leave in an emergency cleanup.</p><div class="eq"><span class="frac"><span>d<i>P</i></span><span>d<i>t</i></span></span> = <i>J</i><sub>P</sub>(<i>t</i>) − <i>J</i><sub>P</sub>(<i>t</i> − <i>R</i>) − <i>c</i>(<i>t</i>)</div><div class="onde">(<i>c</i> = emergency cleanup, card 6) · in the widget: the light colour in the beamline rectangles</div></div>
+      <div class="mcard"><div class="mnum">6</div><h3>Occupation and limit</h3><p>All beamlines share the same synchrotron capacity <i>V</i>. Above the limit α (default 90%, editable), the largest proc/ directories are deleted first until the occupation is 3 points below it. The purchase alert fires 1 year before α is crossed.</p><div class="eq"><i>U</i> = <i>S</i> + <i>F</i> + <i>B</i> + <i>P</i> ≤ <i>V</i><br><i>U</i> &gt; α<i>V</i> ⇒ emergency cleanup</div><div class="onde">in the widget: the red line and the “Emergency cleanups” card</div></div>
+    </div>
+  </div>
+  <div class="panel syspanel">
+    <h3 class="mh3">The complete system</h3>
+    <p class="mp">The equations of the cards hold for <b>each beamline</b> ℓ = 1, …, 22, each with its own input. The beamlines only meet in the resources they share: the tape and the disk. This is where a heavy beamline can squeeze the others.</p>
+    <div class="sysgrid">
+      <div>
+        <div class="syslab">for each beamline ℓ</div>
+        <div class="eq big">
+          <span class="frac"><span>d<i>S</i><sub>ℓ</sub></span><span>d<i>t</i></span></span> = <i>J</i><sub><i>D</i>,ℓ</sub>(<i>t</i>) − <i>J</i><sub><i>D</i>,ℓ</sub>(<i>t</i> − <i>R</i>)<br>
+          <span class="frac"><span>d<i>F</i><sub>ℓ</sub></span><span>d<i>t</i></span></span> = <i>J</i><sub><i>D</i>,ℓ</sub>(<i>t</i> − <i>R</i>) − φ<sub>w,ℓ</sub>(<i>t</i>)<br>
+          <span class="frac"><span>d<i>B</i><sub>ℓ</sub></span><span>d<i>t</i></span></span> = φ<sub>b,ℓ</sub>(<i>t</i>) − φ<sub>b,ℓ</sub>(<i>t</i> − 8)<br>
+          <span class="frac"><span>d<i>P</i><sub>ℓ</sub></span><span>d<i>t</i></span></span> = <i>J</i><sub><i>P</i>,ℓ</sub>(<i>t</i>) − <i>J</i><sub><i>P</i>,ℓ</sub>(<i>t</i> − <i>R</i>) − <i>c</i><sub>ℓ</sub>(<i>t</i>)
+        </div>
+      </div>
+      <div>
+        <div class="syslab">what is shared (couples the beamlines)</div>
+        <div class="eq big">
+          Σ<sub>ℓ</sub> [ φ<sub>w,ℓ</sub> + φ<sub>b,ℓ</sub> ] ≤ <i>W</i>, &nbsp; Σ<sub>ℓ</sub> φ<sub>b,ℓ</sub> ≤ <i>W<sub>b</sub></i><br>
+          <i>U</i> = Σ<sub>ℓ</sub> ( <i>S</i><sub>ℓ</sub> + <i>F</i><sub>ℓ</sub> + <i>B</i><sub>ℓ</sub> + <i>P</i><sub>ℓ</sub> ) ≤ <i>V</i><br>
+          <i>c</i><sub>ℓ</sub>(<i>t</i>) &gt; 0 only if <i>U</i> &gt; α<i>V</i>
+        </div>
+        <p class="mp">The tape serves the queue of all beamlines together, oldest data first. The emergency cleanup deletes the largest proc/ directories first, whatever their beamline.</p>
+      </div>
+      <div>
+        <div class="syslab">inputs and special cases</div>
+        <div class="eq big">
+          <i>J</i><sub><i>D</i>,ℓ</sub>(<i>t</i>) = <i>J</i><sub><i>D</i>,ℓ</sub>(0) · 2<sup><i>t</i>/<i>T<sub>f</sub></i></sup><br>
+          <i>J</i><sub><i>P</i>,ℓ</sub>: proc/ of each proposal ≤ <i>Q</i><sub>k(ℓ)</sub>
+        </div>
+        <p class="mp"><b>Without a usage rule</b>: <i>R</i> = ∞, <i>Q</i> = ∞, nothing goes to tape. What remains is <span class="frac"><span>d<i>U</i></span><span>d<i>t</i></span></span> = Σ<sub>ℓ</sub> <i>J</i><sub>ℓ</sub> − Σ<sub>ℓ</sub> <i>c</i><sub>ℓ</sub>: only the emergency cleanup removes anything.</p>
+        <p class="mp"><b>Summing over beamlines</b> gives back the equations of the cards, with <i>J</i> = Σ<sub>ℓ</sub> <i>J</i><sub>ℓ</sub>.</p>
+      </div>
+    </div>
+  </div>
+  <div class="panel">
+    <h3 class="mh3">Usage rules and what each piece does in the model</h3>
+    <p class="mp">The widget separates what is a usage rule (decided by the institution), what is infrastructure, what is measured and what is still an assumption.</p>
+    <table class="ptab">
+      <tr><th>Piece</th><th>Type</th><th>Role in the equations</th></tr>
+      <tr><td><b>Retention</b> <i>R</i></td><td><span class="tag pol">usage rule</span></td><td>The delay: raw data expire at <i>J<sub>D</sub></i>(<i>t</i> − <i>R</i>) and join the queue; proc/ leaves at <i>J<sub>P</sub></i>(<i>t</i> − <i>R</i>). It is what removes data from the disk.</td></tr>
+      <tr><td><b>Quota per profile</b> <i>Q</i><sub>k</sub> (proc/ only)</td><td><span class="tag pol">usage rule</span></td><td>Caps the proc/ of each proposal, <i>P<sub>i</sub></i> ≤ <i>Q</i><sub>k(ℓ)</sub>: lighter beamline, smaller quota. It flattens <i>J<sub>P</sub></i>. Raw data never have a quota. The profile of a beamline can be changed by clicking on it.</td></tr>
+      <tr><td><b>Notice</b></td><td><span class="tag pol">usage rule</span></td><td>When expired proc/ starts being deleted.</td></tr>
+      <tr><td><b>Embargo</b></td><td><span class="tag" style="background:#ecebe6;color:#555">data policy</span></td><td><b>Does not enter the disk balance.</b> It is a deadline for access, not for storage: it decides who can read the data, not where they live. At most it changes who requests recalls from tape.</td></tr>
+      <tr><td><b>Drives, efficiency, recall link, delay</b></td><td><span class="tag inf">infrastructure</span></td><td>Capacities of the pipes: <i>W</i> = <i>n</i><sub>drives</sub> · η · 242 TB/week, <i>W<sub>b</sub></i> and <i>L</i>.</td></tr>
+      <tr><td><b>Capacity</b> <i>V</i> and <b>limit</b> α</td><td><span class="tag inf">infrastructure</span> <span class="tag pol">usage rule</span></td><td><i>V</i> is the synchrotron share available today (editable); α is how full the disk may get. They do not change the equations, only the ceiling. The purchase alert is set 1 year before <i>U</i> = α<i>V</i>.</td></tr>
+      <tr><td><b>Beamline rates, processed fraction</b></td><td><span class="tag med">measured</span></td><td><i>J</i><sub>ℓ</sub>(0) is the measured rate of each beamline (raw + proc/); <i>f<sub>p</sub></i> is the processed share on disk.</td></tr>
+      <tr><td><b>Future growth, Orion</b></td><td><span class="tag pre">assumption</span></td><td>How the input evolves. To be refined with more months of data.</td></tr>
+    </table>
+  </div>
+  <div class="mgrid2">
+    <div class="panel">
+      <h3 class="mh3">Back-of-the-envelope, with the current controls</h3>
+      <div id="bolso"></div>
+    </div>
+    <div class="panel">
+      <h3 class="mh3">Why a delay equation and not a simple ODE</h3>
+      <svg viewBox="0 0 320 150" class="minisvg"><line x1="30" y1="120" x2="310" y2="120" stroke="#999"/><line x1="30" y1="15" x2="30" y2="120" stroke="#999"/>
+ <path d="M30,25 C70,62 110,85 150,98 C200,110 250,116 305,118" stroke="#a5432f" stroke-width="2.5" fill="none"/>
+ <path d="M30,25 L170,25 L170,120 L305,120" stroke="#2f7a5a" stroke-width="2.5" fill="none"/>
+ <line x1="170" y1="120" x2="170" y2="126" stroke="#555"/><text x="170" y="138" text-anchor="middle" class="t-mute">R</text>
+ <text x="300" y="138" text-anchor="end" class="t-mute">age of the data</text><text x="36" y="14" class="t-mute">fraction still on disk</text>
+ <text x="210" y="102" class="t-sm" style="fill:#a5432f">first-order</text><text x="176" y="40" class="t-sm" style="fill:#2f7a5a">retention</text></svg>
+      <p class="mp">The classical way to model a tank with inflow and outflow is the <b>chemostat</b>: a bioreactor that receives fresh medium and loses, at every instant, a fraction of its content (the same logic as SIR epidemic models). This was the starting point of this model. Its outflow is proportional to the stock, a <i>first-order delay</i>: every byte has the same chance of leaving at any moment, whatever its age, and the fraction that remains decays exponentially (red), with mean residence time <i>R</i>:</p>
+      <div class="eq" style="text-align:center"><span class="frac"><span>d<i>N</i></span><span>d<i>t</i></span></span> = <i>J</i>(<i>t</i>) − <span class="frac"><span><i>N</i></span><span><i>R</i></span></span></div>
+      <p class="mp">A retention rule does not work like that. It is a step, a <i>pipeline delay</i> (green): nothing leaves before <i>R</i>, everything leaves at <i>R</i>. With the same mean <i>R</i>, a first-order delay would remove recent data too early and keep old data forever. Hence the outflow today is the inflow <i>R</i> weeks ago: a <b>delay</b> equation, not an ODE. The tape bottleneck (min{<i>W</i>, <i>F</i>}) and the 90% trigger have no counterpart in the chemostat either.</p>
+    </div>
+    <div class="panel">
+      <h3 class="mh3">How the simulation generates the data</h3>
+      <ul class="mp" style="padding-left:16px;margin:4px 0">
+        <li>Proposal by proposal, week by week. The equations above are the average of this.</li>
+        <li>Each beamline receives a random number of proposals per week. The mean matches, in TB/week, the measured rate of the beamline; the profile sets the typical proposal size. The mean grows over time.</li>
+        <li>Each proposal has a random raw size and a proc/ that grows over ~6 weeks; sizes and proc/÷raw ratios per profile come from the real proposals (commissioning proposals are larger, with inflated proc/).</li>
+        <li>The past is generated so that the history reproduces today's usage of the synchrotron share (<span class="u0txt">3.24</span> PB by default: beamlines + general, split among the beamlines).</li>
+        <li>Recall requests are drawn per proposal on tape, with the weekly chance set in the assumptions.</li>
+        <li>Week 0 is today: both tanks start from the same state, and new proposals and the usage rules act from week 1 on.</li>
+        <li>20 futures are simulated; the band in the occupation chart covers 80% of them.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<div id="pop"></div>
+
+<script>
+// ================= CALIBRAÇÃO (mexa aqui) =================
+const CAL={
+  // decimal TB. The capacity of the synchrotron share is editable (P.Vcap).
+  usoLinhas:3235, usoGeral:0, usoOutros:0,  // today: 2.68 PB beamlines + 0.56 PB general
+  usado0:3235,                                // ocupação total hoje (a rampa do Orion é P.orionRampa, logística)
+  inicio:new Date(2026,10,12), H:477,         // semana 0 = hoje (12/11/2026); 477 semanas ≈ fim de 2035
+  rampaCentroSem:6, rampaLarguraSem:2,        // proc/ cresce em rampa logística depois da medida
+  voltaFicaSem:8,                             // bruto que volta da fita fica 8 semanas no disco
+  faxinaMargem:0.03,                          // faxina no susto apaga proc/ até ficar 3% abaixo do limite
+  nEnsemble:20, fitaTB:18, driveTBsem:241.92,  // LTO-9: 18 TB/fita, 400 MB/s nativo = 241,92 TB/semana a 100%
+  // tamanho típico de proposta por perfil (o ritmo em TB/semana vem do Grafana)
+  perfis:{
+    pesada:{nome:'heavy',med:0.75,sig:1.4,clip:20,rMed:2.7,rSig:1.3,rClip:60,rate:1.2,comm:0.12,cor:'#1f4e8c'},
+    mpesada:{nome:'medium-heavy',med:0.2,sig:1.7,clip:20,rMed:0.15,rSig:1.6,rClip:30,rate:1.0,comm:0.10,cor:'#3a72b5'},
+    media:{nome:'medium',med:0.017,sig:1.3,clip:10,rMed:9.5,rSig:1.3,rClip:40,rate:1.0,comm:0.08,cor:'#6b9bd1'},
+    leve:{nome:'light',med:0.044,sig:1.9,clip:10,rMed:0.01,rSig:2.0,rClip:3,rate:1.2,comm:0.05,cor:'#a9c6e8'},
+    orion:{nome:'Orion (heavy imaging)',med:3.0,sig:1.4,clip:40,rMed:2.7,rSig:1.3,rClip:60,rate:1.0,comm:0.10,cor:'#5b3b8c'}
+  },
+  comm:{fatorD:1.5,clipD:40,rFator:3,intenso:4}, // comissionamento: maior e com proc/ inchado (medianas e σ por perfil: propostas reais, nov/2026) // comissionamento: proc/ insano
+                                            // usuário externo: razoável, bruto ≤ 5 TB
+};
+const SIG={mogno:'MGN',caterete:'CAT',carnauba:'CNB',manaca:'MNC',ema:'EMA',paineira:'PNR',jatoba:'JAT',sapucaia:'SPU',ariranha:'ARI',teiu:'TEI',quati:'QUA',ipe:'IPE',sabia:'SAB',sape:'SPE',imbuia:'IMB',cedro:'CED',tatu:'TAT',carcara:'CAR',sussuarana:'SUS',sibipiruna:'SIB',timbo:'TIB',hibisco:'HIB'};
+// Grafana "Space Usage by Beamline Over Time", 23/07–16/11/2026 (16,6 semanas), bruto+proc: TB/semana
+const GRAF={mogno:6.81,caterete:5.16,manaca:1.97,carnauba:1.05,paineira:0.242,sapucaia:0.101,ipe:0.050,ema:0.0098,imbuia:0.0048,cedro:0.0044};
+const LINHAS=[['mogno','pesada',1],['caterete','pesada',1],['carnauba','mpesada',1],['manaca','mpesada',1],
+ ['ema','leve',1],['paineira','media',1],['jatoba','leve',1],['sapucaia','media',1],['ariranha','leve',1],['teiu','leve',1],
+ ['quati','leve',1],['ipe','leve',1],['sabia','leve',1],['sape','leve',1],['imbuia','leve',1],['cedro','leve',1],['tatu','leve',1],['carcara','leve',1],['sussuarana','leve',1],
+ ['sibipiruna','orion',1],['timbo','orion',1],['hibisco','orion',1]];
+const NL=LINHAS.length;
+const ANOFIM=String(new Date(CAL.inicio.getTime()+(CAL.H-1)*7*864e5).getFullYear()); // last year of the horizon
+const HUE={pesada:212,mpesada:188,media:145,leve:40,orion:272};
+const LCOR=[],LCORP=[],LDARK=[];function recolor(){const cnt={},idx={};LINHAS.forEach(([n,pk])=>cnt[pk]=(cnt[pk]||0)+1);
+  LINHAS.forEach(([n,pk],i)=>{const k=idx[pk]||0;idx[pk]=k+1;const m=cnt[pk],lt=m>1?30+28*k/(m-1):38,sat=pk==='leve'?55:60;
+    LCOR[i]=`hsl(${HUE[pk]},${sat}%,${lt}%)`;LCORP[i]=`hsl(${HUE[pk]},${sat-10}%,${Math.min(88,lt+30)}%)`;LDARK[i]=lt<50})}recolor();
+function taxaLinha(l){const n=LINHAS[l][0];return GRAF[n]!==undefined?GRAF[n]:0.003}
+let VIEW='linha';
+
+// ================= estado dos controles =================
+const P={drives:1,ef:0.5,volta:10,atraso:5,fita:0,ret:24,orionSem:null,idade:4.5,dobraF:5,fp:0.68,aviso:8,pVolta:0.003,
+  qp:{pesada:10,mpesada:5,media:2,leve:0.5,orion:10},orionTB:5,orionRampa:2,outrosJ:0,ib2Sem:null,V2:4470,Vcap:4470,lim:0.9,alertaSem:52,fitaPreco:150,moeda:'USD',copias:1};
+
+// ================= aleatoriedade =================
+function mulberry(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+function gauss(r){let u=0;while(u===0)u=r();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*r())}
+function pois(r,l){if(l<=0)return 0;if(l>30)return Math.max(0,Math.round(l+Math.sqrt(l)*gauss(r)));const L=Math.exp(-l);let k=0,p=1;do{k++;p*=r()}while(p>L);return k-1}
+function sampD(r,pf,m,comm){return comm?Math.min(CAL.comm.clipD,pf.med*m*CAL.comm.fatorD*Math.exp(pf.sig*gauss(r))):Math.min(pf.clip,pf.med*m*Math.exp(pf.sig*gauss(r)))}
+function sampR(r,pf,comm){const f=comm?CAL.comm.rFator:1;return Math.min(pf.rClip*f,pf.rMed*f*Math.exp(pf.rSig*gauss(r)))}
+const EXP={};
+function expect(pk,m,comm){const key=pk+m+comm;if(EXP[key])return EXP[key];const r=mulberry(12345),pf=CAL.perfis[pk];let d=0,dr=0;const n=20000;
+  for(let i=0;i<n;i++){const D=sampD(r,pf,m,comm),R=sampR(r,pf,comm);d+=D;dr+=D*R}return EXP[key]={d:d/n,dr:dr/n}}
+
+// ================= calibração: Grafana (ritmo por linha) + ocupação de hoje =================
+function mix(pk){const pf=CAL.perfis[pk],e=expect(pk,1,false),ec=expect(pk,1,true),wc=pf.comm/(pf.rate+pf.comm);return{wc,d:(1-wc)*e.d+wc*ec.d,dr:(1-wc)*e.dr+wc*ec.dr}}
+function calib(P){
+  const T0=Math.round(P.idade*52),lam=new Float64Array(NL),lamS=new Float64Array(NL);
+  let R0=0,Ws=0,JD=0,Edr=0;
+  for(let l=0;l<NL;l++){const pk=LINHAS[l][1];if(pk==='orion')continue;const tx=taxaLinha(l),mx=mix(pk);R0+=tx;Ws+=tx+0.02;lam[l]=(1-P.fp)*tx/mx.d;JD+=(1-P.fp)*tx;Edr+=lam[l]*mx.dr}
+  const sR=(P.fp/(1-P.fp))*JD/Edr;
+  for(let l=0;l<NL;l++){const pk=LINHAS[l][1];if(pk==='orion'){lam[l]=(1-P.fp)*P.orionTB/mix(pk).d;continue}lamS[l]=(1-P.fp)*(taxaLinha(l)+0.02)*(R0/Ws)/mix(pk).d}
+  // crescimento implícito do passado: Σ_{t=-T0}^{-1} e^{g t} = estoque das linhas / ritmo de hoje
+  const alvo=CAL.usoLinhas/R0,S=g=>{let x=0;for(let t=-T0;t<0;t++)x+=Math.exp(g*t);return x};
+  let lo=-0.05,hi=0.05;for(let k=0;k<60;k++){const m=(lo+hi)/2;if(S(m)>alvo)lo=m;else hi=m}const g=(lo+hi)/2;
+  return {T0,g,R0,lam,lamS,sR,dobraPassado:g>1e-5?Math.LN2/g/52:null};
+}
+const RTC={};function rampTable(n){if(RTC[n])return RTC[n];const a=new Float64Array(n);for(let k=0;k<n;k++)a[k]=ramp(k);return RTC[n]=a}
+function t0max(G){return -G.T[0]}
+function ramp(age){return 1/(1+Math.exp(-(age-CAL.rampaCentroSem)/CAL.rampaLarguraSem))}
+
+// ================= gera os pingos (mesmos pros dois tanques) =================
+function genRun(P,C,seed){
+  const r=mulberry(seed*7919+13),L=[],T=[],D=[],R=[],CM=[];
+  const push=(l,t,comm)=>{const pf=CAL.perfis[LINHAS[l][1]];L.push(l);T.push(t);D.push(sampD(r,pf,1,comm));R.push(sampR(r,pf,comm)*C.sR);CM.push(comm?1:0)};
+  const WC=LINHAS.map(x=>mix(x[1]).wc);
+  for(let t=-C.T0;t<0;t++){const e=Math.exp(C.g*t);
+    for(let l=0;l<NL;l++){if(LINHAS[l][1]==='orion')continue;let n=pois(r,C.lamS[l]*e);while(n--)push(l,t,r()<WC[l])}}
+  const nPast=L.length;
+  // ajuste fino: bate o estoque das linhas e a fração de proc/
+  let sd=0;for(let i=0;i<nPast;i++)sd+=D[i];const kD=CAL.usoLinhas*(1-P.fp)/sd;
+  let sp=0;for(let i=0;i<nPast;i++){D[i]*=kD;sp+=D[i]*R[i]*ramp(-T[i])}const kR=CAL.usoLinhas*P.fp/sp;for(let i=0;i<nPast;i++)R[i]*=kR;
+  const idxEnd=new Int32Array(CAL.H);const TdF=P.dobraF*52;
+  for(let t=0;t<CAL.H;t++){const g=Math.pow(2,t/TdF);
+    if(t>0)for(let l=0;l<NL;l++){let lt=C.lam[l]*g;
+      if(LINHAS[l][1]==='orion'){if(P.orionSem===null||t<P.orionSem)continue;const Tr=P.orionRampa*52;lt*=1/(1+Math.exp(-4.394*(t-P.orionSem-Tr/2)/Tr))}
+      let n=pois(r,lt);while(n--)push(l,t,r()<WC[l])}
+    idxEnd[t]=L.length}
+  return {n:L.length,nPast,L:Int8Array.from(L),T:Int32Array.from(T),D:Float64Array.from(D),R:Float64Array.from(R),CM:Uint8Array.from(CM),idxEnd};
+}
+
+// ================= um tanque (s=0 sem regra, s=1 com regra) =================
+function simScen(G,P,s,seed,live){
+  const N=G.n,H=CAL.H,Rw=Math.round(P.ret*52/12),Vof=t=>(P.ib2Sem!==null&&t>=P.ib2Sem)?P.V2:P.Vcap,Oof=null;let Ocur=CAL.usoGeral+CAL.usoOutros;
+  const rq=new Int32Array(N),dD=new Float64Array(N),dT=new Float64Array(N),bk=new Float64Array(N),pend=new Float64Array(N),Q=new Float64Array(N).fill(Infinity),pDel=new Uint8Array(N),bU=new Int32Array(N);
+  for(let i=0;i<G.nPast;i++)dD[i]=G.D[i];
+  const rr=mulberry(seed*31+s*1000+7);
+  const K=['occ','occPre','data','queue','back','proc','tape','out','inn','fax','susto','lost','volta','pendTB','tapeIni','expir','vit','esp','jd','venc','V','O'];
+  const rec={};for(const k of K)rec[k]=new Float64Array(H);
+  if(live){rec.lD=new Float64Array(H*NL);rec.lP=new Float64Array(H*NL)}
+  const RT=rampTable(t0max(G)+H+1),DR=new Float64Array(N);for(let i=0;i<N;i++)DR[i]=G.D[i]*G.R[i];
+  const procOf=(i,t)=>{if(pDel[i])return 0;const p=DR[i]*RT[t-G.T[i]];return p<Q[i]?p:Q[i]};
+  let espSum=0,espN=0,vit=0,occPrev=CAL.usado0,fax=0,susto=0,lost=0,volta=0,expir=0,tape=0;
+  let kE=0,qP=0,expP=0,dP=0,nTape=0,pendList=[],backList=[];
+  const Ls=Math.ceil(P.atraso/7);
+  if(s===1)while(kE<G.nPast&&G.T[kE]<=-Rw)kE++; // já vencidos hoje: fila inicial, não conta como vencimento
+  for(let t=0;t<H;t++){
+    const a0=t===0?G.nPast:G.idxEnd[t-1],a1=G.idxEnd[t];
+    const V=Vof(t),Lim=P.lim*V,addO=t>0?Math.min(P.outrosJ,Math.max(0,V-occPrev)):0;Ocur+=addO;const Ot=Ocur;let free=V-occPrev-addO,out=0,inn=0,jd=0,venc=0;
+    if(s===1&&t>0){ // semana 0 = hoje: os dois tanques partem iguais; a regra age a partir da semana 1
+      const kE0=kE;while(kE<a0&&G.T[kE]<=t-Rw)kE++;
+      for(let i=kE0;i<kE;i++)venc+=G.D[i];
+      if(t>=P.aviso)for(;expP<kE;expP++)if(!pDel[expP]){const p=procOf(expP,t);expir+=p;free+=p;pDel[expP]=1}
+      let bud=P.fita,bv=Math.min(P.volta,bud);
+      // volta (prioridade, tubo fino)
+      const np=[];
+      for(const i of pendList){if(bv>0&&free>0&&t-rq[i]>=Ls){const a=Math.min(pend[i],bv,free);if(bk[i]===0&&a>0)backList.push(i);bk[i]+=a;pend[i]-=a;bv-=a;bud-=a;inn+=a;free-=a;bU[i]=t+CAL.voltaFicaSem;
+        if(pend[i]<=1e-9){pend[i]=0;espSum+=t-rq[i]+P.atraso/7-Ls;espN++;continue}}np.push(i)}
+      pendList=np;
+      // ida (fila, do mais velho pro mais novo)
+      for(let i=qP;i<kE&&bud>0;i++)if(dD[i]>0){const a=Math.min(dD[i],bud);if(dT[i]===0)nTape++;dD[i]-=a;dT[i]+=a;bud-=a;out+=a;free+=a}
+      while(qP<kE&&dD[qP]<=0)qP++;
+      tape+=out;
+      // bruto que voltou sai depois de 8 semanas
+      backList=backList.filter(i=>{if(pend[i]===0&&t>=bU[i]){free+=bk[i];bk[i]=0;return false}return true});
+      // novos pedidos de volta
+      let k=pois(rr,P.pVolta*Math.max(0,nTape-pendList.length-backList.length));const lim=Math.min(qP+1,a0);
+      while(k-->0&&lim>0){for(let tr=0;tr<6;tr++){const j=Math.floor(rr()*lim);if(dT[j]>0&&bk[j]===0&&pend[j]===0){pend[j]=dT[j];rq[j]=t;pendList.push(j);volta++;break}}}
+    }
+    for(let i=a0;i<a1;i++){const w=Math.min(G.D[i],Math.max(0,free));dD[i]=w;free-=w;jd+=w;
+      if(w<G.D[i]){lost+=G.D[i]-w;DR[i]*=w/G.D[i];if(w<=0)pDel[i]=1}
+      if(s===1)Q[i]=P.qp[LINHAS[G.L[i]][1]]}
+    while(dP<a1&&dD[dP]<=0&&pDel[dP])dP++;
+    let data=0,queue=0,back=0,proc=0,pendS=0;
+    const o=t*NL;
+    for(let i=dP;i<a1;i++){const pp=procOf(i,t);proc+=pp;data+=dD[i];if(live){const l=G.L[i];rec.lD[o+l]+=dD[i];rec.lP[o+l]+=pp}}
+    if(s===1){for(let i=qP;i<kE;i++)queue+=dD[i];for(const i of backList){back+=bk[i];if(live)rec.lD[o+G.L[i]]+=bk[i]}for(const i of pendList)pendS+=pend[i]}
+    let occ=data+back+proc+Ot;const occPre=occ;
+    if(occ>Lim){fax++;const idx=[],pv=[];for(let i=dP;i<a1;i++)if(!pDel[i]){const p=procOf(i,t);if(p>0){idx.push(i);pv.push(p)}}
+      const ord=idx.map((_,k)=>k).sort((a,b)=>pv[b]-pv[a]);
+      for(const k of ord){if(occ<=Lim-CAL.faxinaMargem*V)break;const p=pv[k];occ-=p;proc-=p;susto+=p;vit++;if(live)rec.lP[o+G.L[idx[k]]]-=p;pDel[idx[k]]=1}}
+    occPrev=occ;
+    const v={occ,occPre,data,queue,back,proc,tape,out,inn,fax,susto,lost,volta,pendTB:pendS,tapeIni:tape-out,expir,vit,esp:espN?espSum/espN:0,jd,venc,V,O:Ot};
+    for(const k of K)rec[k][t]=v[k];
+  }
+  return rec;
+}
+
+// ================= ensemble (em pedaços, pra não travar a tela) =================
+function newJob(P){return{P:JSON.parse(JSON.stringify(P)),C:calib(P),k:0,occ:[[],[]],pts:[[],[]],cross:[[],[]],live:null,G:null}}
+function jobStep(J,m){const n=CAL.nEnsemble,H=CAL.H;
+  for(let c=0;c<m&&J.k<n;c++,J.k++){const k=J.k,G=genRun(J.P,J.C,k+1);
+    for(let s=0;s<2;s++){const rec=simScen(G,J.P,s,k+1,k===0);
+      if(k===0){if(!J.live)J.live=[];J.live[s]=rec;J.G=G}
+      J.occ[s].push(rec.occ);J.pts[s].push({d:Float64Array.from(rec.data,(x,i)=>x+rec.back[i]),p:rec.proc});
+      let cr=null;for(let t=0;t<H;t++)if(rec.occPre[t]>P.lim*rec.V[t]){cr=t;break}J.cross[s].push(cr)}}
+  return J.k>=n}
+function jobResult(J){const P=J.P,C=J.C,H=CAL.H,n=J.k;
+  const band=[0,1].map(s=>{const lo=new Float64Array(H),md=new Float64Array(H),hi=new Float64Array(H);
+    for(let t=0;t<H;t++){const a=J.occ[s].map(o=>o[t]).sort((x,y)=>x-y);const q=f=>a[Math.min(a.length-1,Math.floor(f*(a.length-1)+0.5))];lo[t]=q(0.1);md[t]=q(0.5);hi[t]=q(0.9)}return{lo,md,hi}});
+  const cstat=[0,1].map(s=>{const c=J.cross[s].filter(x=>x!==null).sort((a,b)=>a-b);return{prob:c.length/n,med:c.length?c[Math.floor((c.length-1)/2)]:null}});
+  let inD=(1-P.fp)*C.R0,inP=P.fp*C.R0,nProp=0;for(let l=0;l<NL;l++)if(LINHAS[l][1]!=='orion')nProp+=C.lam[l];
+  return {C,band,cstat,live:J.live,G:J.G,pts:J.pts,inD,inP,nProp,parcial:n<CAL.nEnsemble};
+}
+function runAll(P){const J=newJob(P);jobStep(J,CAL.nEnsemble);return jobResult(J)}
+
+// ================= formatação =================
+const fmt=(x,d=0)=>x.toLocaleString('en-US',{minimumFractionDigits:d,maximumFractionDigits:d});
+const TB=x=>x>=995?fmt(x/1000,2)+' PB':fmt(x)+' TB';
+const pct=x=>fmt(100*x/P.Vcap,1)+'%';
+function dataSem(w){const d=new Date(CAL.inicio.getTime()+w*7*864e5);return d.toLocaleDateString('en-US',{day:'2-digit',month:'short',year:'numeric'})}
+function yearTicks(f){for(let y=CAL.inicio.getFullYear()+1;;y++){const t=(new Date(y,0,1)-CAL.inicio)/(7*864e5);if(t>CAL.H-1)break;f(t)}}
+function anoDe(t){return String(new Date(CAL.inicio.getTime()+t*7*864e5+864e5).getFullYear())}
+function mesAno(w){const d=new Date(CAL.inicio.getTime()+w*7*864e5);return d.toLocaleDateString('en-US',{month:'short',year:'numeric'})}
+
+// ================= UI =================
+let RES=null,cur=0,playing=false,speed=8,lastTs=null,lastWeek=-1,anim=0;
+const $=id=>document.getElementById(id);
+const sliders={drives:'drives',ef:'ef',volta:'volta',atraso:'atraso',ret:'ret',idade:'idade',dobraF:'dobraF',fp:'fp',aviso:'aviso',pv:'pVolta',orionTB:'orionTB',orionRampa:'orionRampa',lim:'lim'};
+function labels(){
+  P.fita=P.drives*CAL.driveTBsem*P.ef;
+  $('o-drives').textContent=P.drives;$('o-ef').textContent=fmt(P.ef*100)+'%';$('o-atraso').textContent=P.atraso+' days';
+  $('h-fita').textContent=(P.drives===0?'nothing is written to tape':'now ≈ '+fmt(P.fita)+' TB/week ≈ '+fmt(P.fita/CAL.fitaTB,1)+' cartridges/week')+' · 1 drive ≈ 121 TB/week ≈ 7 cartridges/week at 50% efficiency';
+  $('o-volta').textContent=fmt(P.volta)+' TB/week';$('h-volta').textContent='recalls from tape, ~'+P.atraso+' days delay; reading uses the same drives';
+  $('o-ret').textContent=P.ret+' months';for(const k in P.qp)$('o-q-'+k).textContent=fmt(P.qp[k],P.qp[k]<1?1:0)+' TB';
+  $('o-orionTB').textContent=fmt(P.orionTB,1)+' TB/week';$('o-orionRampa').textContent=String(P.orionRampa)+(P.orionRampa===1?' year':' years');$('o-lim').textContent=fmt(P.lim*100)+'%';
+  $('o-idade').textContent=fmt(P.idade,1)+' yr';$('o-dobraF').textContent=fmt(P.dobraF,1)+' yr';
+  $('o-fp').textContent=fmt(P.fp*100)+'%';$('o-aviso').textContent=P.aviso+' wk';$('o-pv').textContent=fmt(P.pVolta*100,1)+'%';
+}
+for(const k in P.qp)$('q-'+k).addEventListener('input',e=>{P.qp[k]=+e.target.value;labels();schedule()});
+function capCheck(){const v=+$('vcap').value,u=+$('vuso').value,ok=v>0&&u>0&&u<v;
+  $('h-cap').classList.toggle('bad',!ok);
+  if(!ok){$('h-cap').textContent='used must be smaller than total';$('o-livre').textContent='';return}
+  $('h-cap').textContent=(Math.abs(v-4.47)<1e-9&&Math.abs(u-3.24)<1e-9)?'default: 2.68 PB beamlines + 0.56 general':'default: 4.47 total, 3.24 used';
+  $('o-livre').textContent=fmt(v-u,2)+' PB free';
+  document.querySelectorAll('.u0txt').forEach(e=>e.textContent=fmt(u,2));
+  P.Vcap=v*1000;CAL.usoLinhas=CAL.usado0=u*1000;schedule()}
+$('vcap').addEventListener('input',capCheck);$('vuso').addEventListener('input',capCheck);
+$('preco').addEventListener('input',e=>{P.fitaPreco=Math.max(0,+e.target.value||0)});$('moeda').onchange=e=>{P.moeda=e.target.value};$('copias').onchange=e=>{P.copias=+e.target.value};
+for(const [id,key] of Object.entries(sliders)){$(id).addEventListener('input',e=>{P[key]=+e.target.value;labels();schedule()})}
+let tmr=null;function schedule(){clearTimeout(tmr);tmr=setTimeout(recompute,120)}
+let JOB=null;
+function recompute(){const J=newJob(P);JOB=J;jobStep(J,1);RES=jobResult(J);refresh();
+  const tick=()=>{if(JOB!==J)return;const done=jobStep(J,3);RES=jobResult(J);refresh();if(!done)setTimeout(tick,0)};setTimeout(tick,0)}
+function refresh(){lastWeek=-1;updateCards();banner();bolso();drawChart();drawFlows();foot()}
+
+function semDe(y,m){return Math.max(0,Math.round((new Date(y,m,1)-CAL.inicio)/(7*864e5)))}
+(function(){const sel=$('orion');let h='<option value="">not included</option>';
+  for(let y=2027;y<=2034;y++)for(const m of [0,6])h+=`<option value="${y}-${m}">${m?'Jul':'Jan'} ${y}</option>`;sel.innerHTML=h;sel.value='2028-0';
+  const set=()=>{const v=sel.value;if(!v){P.orionSem=null;$('h-orion').textContent='SIB, TIB and HIB left out of the simulation'}
+    else{const [y,m]=v.split('-').map(Number);P.orionSem=semDe(y,m);$('h-orion').textContent='SIB, TIB and HIB (heavy imaging) start producing data in '+(m?'Jul':'Jan')+' '+y}};
+  set();sel.onchange=()=>{set();recompute()}})();
+
+$('play').onclick=()=>{playing=!playing;if(playing&&cur>=CAL.H-1.01)cur=0;$('play').textContent=playing?'⏸ Pause':'▶ Run'};
+$('reset').onclick=()=>{cur=0;playing=false;$('play').textContent='▶ Run';drops.length=0};
+document.querySelectorAll('.seg button').forEach(b=>b.onclick=()=>{VIEW=b.dataset.v;document.querySelectorAll('.seg button').forEach(x=>x.classList.toggle('on',x===b));$('leg-tipo').style.display=VIEW==='tipo'?'':'none';$('leg-linha').style.display=VIEW==='linha'?'':'none'});
+$('speed').onchange=e=>speed=+e.target.value;
+$('scrub').oninput=e=>{cur=+e.target.value;drops.length=0};
+
+
+// ---------- canvas helpers ----------
+function fit(cv,h){const dpr=window.devicePixelRatio||1,w=cv.clientWidth||cv.parentElement.clientWidth;cv.style.height=h+'px';cv.width=Math.round(w*dpr);cv.height=Math.round(h*dpr);const g=cv.getContext('2d');g.setTransform(dpr,0,0,dpr,0,0);return{g,w,h}}
+let LAY=null,PL=null,hatch=null,hatchG=null;
+function layout(){
+  const cv=$('plant'),W=cv.parentElement.clientWidth,pad=6,wide=W>=900;
+  const cols=Math.min(22,Math.max(7,Math.floor((W-2*pad)/46))),rows=Math.ceil(NL/cols),bw=(W-2*pad)/cols,bh=30;
+  const boxes=LINHAS.map((l,i)=>({x:pad+(i%cols)*bw+2,y:6+Math.floor(i/cols)*(bh+6),w:bw-4,h:bh}));
+  const yM=6+rows*(bh+6)+26,tankTop=yM+62,tankH=W<600?220:(wide?340:300);
+  const sideW=wide?Math.min(500,Math.round(W*0.36)):0,Wt=W-sideW;
+  const taubW=Wt<600?62:84,gap=Wt<600?30:48,gap2=Wt<600?44:96;
+  const tw=Math.min(420,(Wt-2*pad-taubW-gap-gap2-40)/2);
+  const tot=2*tw+gap+gap2+taubW,x0=(Wt-tot)/2+14;
+  LAY={W,H:tankTop+tankH+80,boxes,yM,tankTop,tankH,tw,tanks:[x0,x0+tw+gap],taub:{x:x0+2*tw+gap+gap2,w:taubW}};
+  const sd=$('side');
+  if(wide){sd.className='float';const top=yM+16,hh=LAY.H-top-4;sd.style.left=(Wt+4)+'px';sd.style.top=top+'px';sd.style.width=(sideW-8)+'px';LAY.chartH=Math.max(110,(hh-96)/2)}
+  else{sd.className='';sd.style.width='';LAY.chartH=200}
+  PL=fit(cv,LAY.H);
+  const hc=document.createElement('canvas');hc.width=hc.height=8;const hg=hc.getContext('2d');hg.fillStyle='#bcd3ec';hg.fillRect(0,0,8,8);hg.strokeStyle='#2f6fb0';hg.lineWidth=3;
+  hg.beginPath();hg.moveTo(-2,10);hg.lineTo(10,-2);hg.moveTo(6,10);hg.lineTo(10,6);hg.moveTo(-2,2);hg.lineTo(2,-2);hg.stroke();hatch=PL.g.createPattern(hc,'repeat');
+  const hc2=document.createElement('canvas');hc2.width=hc2.height=8;const h2=hc2.getContext('2d');h2.fillStyle='#f1efe9';h2.fillRect(0,0,8,8);h2.strokeStyle='#d3cfc4';h2.lineWidth=1.5;h2.beginPath();h2.moveTo(-2,10);h2.lineTo(10,-2);h2.moveTo(6,10);h2.lineTo(10,6);h2.moveTo(-2,2);h2.lineTo(2,-2);h2.stroke();hatchG=PL.g.createPattern(hc2,'repeat');
+}
+function lerpRec(rec,k){const t=Math.min(CAL.H-1,Math.floor(cur)),f=cur-t,t2=Math.min(CAL.H-1,t+1);return rec[k][t]*(1-f)+rec[k][t2]*f}
+
+// ---------- pingos ----------
+const drops=[];
+function spawn(week){if(!RES)return;const G=RES.G,a0=week===0?G.nPast:G.idxEnd[week-1],a1=G.idxEnd[week];
+  for(let i=a0;i<a1;i++){const b=LAY.boxes[G.L[i]];drops.push({x:b.x+b.w*(0.2+0.6*Math.random()),y:b.y+b.h,ph:0,r:Math.max(1.4,Math.min(7,2.2*Math.sqrt(G.D[i]))),comm:G.CM[i],delay:Math.random()*0.9})}
+  if(drops.length>900)drops.splice(0,drops.length-900)}
+function stepDrops(dt){const L=LAY;for(const d of drops){if(d.delay>0){d.delay-=dt;continue}
+  if(d.ph===0){d.y+=dt*160;if(d.y>=L.yM){d.y=L.yM;d.ph=1;d.k=0;d.sx=d.x}}
+  else{d.k+=dt*1.6;if(d.k>=1)d.done=true}}
+  for(let i=drops.length-1;i>=0;i--)if(drops[i].done)drops.splice(i,1)}
+
+function drawPlant(){
+  if(!RES||!LAY)return;const g=PL.g,L=LAY,live=RES.live,wk=Math.min(CAL.H-1,Math.floor(cur));
+  g.clearRect(0,0,L.W,L.H);
+  // nascimentos por linha nesta semana (brilho)
+  const G=RES.G,a0=wk===0?G.nPast:G.idxEnd[wk-1],a1=G.idxEnd[wk],glow=new Float64Array(NL);for(let i=a0;i<a1;i++)glow[G.L[i]]+=G.D[i];
+  // caixinhas
+  g.font='9.5px -apple-system,Segoe UI,sans-serif';g.textAlign='center';g.textBaseline='middle';
+  LINHAS.forEach(([nm,pk],i)=>{const b=L.boxes[i],pf=CAL.perfis[pk],off=pk==='orion'&&(P.orionSem===null||wk<P.orionSem);
+    g.fillStyle=off?'#eceae4':LCOR[i];g.globalAlpha=off?1:0.55+0.45*Math.min(1,glow[i]/4);roundRect(g,b.x,b.y,b.w,b.h,5);g.fill();g.globalAlpha=1;
+    if(off){g.setLineDash([3,3]);g.strokeStyle='#aaa';roundRect(g,b.x,b.y,b.w,b.h,5);g.stroke();g.setLineDash([])}
+    g.fillStyle=off?'#999':(LDARK[i]?'#fff':'#13233a');g.font='bold 10.5px -apple-system,Segoe UI,sans-serif';g.fillText(SIG[nm],b.x+b.w/2,b.y+b.h/2-5);g.font='8.5px -apple-system,Segoe UI,sans-serif';g.fillText(nm.length>9&&b.w<56?nm.slice(0,8)+'.':nm,b.x+b.w/2,b.y+b.h/2+7);
+  });
+  // canos
+  const cx=[L.tanks[0]+L.tw/2,L.tanks[1]+L.tw/2];
+  g.strokeStyle='#d8d5cc';g.lineWidth=6;g.lineCap='round';g.beginPath();g.moveTo(L.boxes[0].x+10,L.yM);g.lineTo(Math.max(...L.boxes.map(b=>b.x+b.w))-10,L.yM);g.stroke();
+  g.lineWidth=1;
+  // pingos
+  for(const d of drops){if(d.delay>0)continue;g.fillStyle='#2f6fb0';
+    if(d.ph===0){g.beginPath();g.arc(d.x,d.y,d.r,0,7);g.fill()}
+    else for(let s=0;s<2;s++){const x=d.sx+(cx[s]-d.sx)*d.k,y=L.yM+(L.tankTop-L.yM)*d.k;g.globalAlpha=0.8;g.beginPath();g.arc(x,y,d.r*0.8,0,7);g.fill();g.globalAlpha=1}}
+  // tanques
+  const Vmax=vMax(),sc=L.tankH/Vmax,bot=L.tankTop+L.tankH,Vt=vDe(wk);
+  for(let s=0;s<2;s++){const x=L.tanks[s],r=live[s];
+    const data=lerpRec(r,'data'),queue=lerpRec(r,'queue'),back=lerpRec(r,'back'),proc=lerpRec(r,'proc'),Ot=lerpRec(r,'O'),occ=data+back+proc+Ot;
+    g.fillStyle='#fbfaf7';g.fillRect(x,L.tankTop,L.tw,L.tankH);
+    // capacidade que (ainda) não existe
+    const ycap=bot-Vt*sc;if(ycap>L.tankTop+0.5){g.fillStyle=hatchG;g.fillRect(x+1,L.tankTop,L.tw-2,ycap-L.tankTop);g.fillStyle='#777';g.font='9.5px sans-serif';g.textAlign='center';
+      if(ycap-L.tankTop>14)g.fillText(P.ib2Sem!==null&&wk<P.ib2Sem?'Ibirá 2 (from '+mesAno(P.ib2Sem)+')':'capacity lost',x+L.tw/2,L.tankTop+(ycap-L.tankTop)/2+3)}
+    let y=bot;const lay=(v,fs)=>{const h=v*sc;g.fillStyle=fs;g.fillRect(x+1,y-h,L.tw-2,h);y-=h};
+    const fo=Math.max(0,Ot-CAL.usoGeral);lay(fo,'#b9b6ad');lay(Math.min(Ot,CAL.usoGeral),'#d6cce3');
+    if(fo*sc>12){g.fillStyle='#4a4740';g.font='9.5px sans-serif';g.textAlign='center';g.fillText('other labs '+TB(fo),x+L.tw/2,bot-fo*sc/2+3)}
+    if(CAL.usoGeral*sc>11){g.fillStyle='#5b4d70';g.font='9.5px sans-serif';g.textAlign='center';g.fillText('general '+TB(CAL.usoGeral),x+L.tw/2,bot-fo*sc-CAL.usoGeral*sc/2+3)}
+    if(VIEW==='tipo'){lay(data-queue,'#2f6fb0');lay(queue,hatch);lay(back,'#8fd0ee');lay(proc,'#e08a2e')}
+    else{y=drawByLine(g,r,x+1,y,L.tw-2,sc)}
+    // limite
+    const yl=bot-P.lim*Vt*sc;g.strokeStyle='#d0342c';g.lineWidth=2;g.setLineDash([6,4]);g.beginPath();g.moveTo(x-6,yl);g.lineTo(x+L.tw+6,yl);g.stroke();g.setLineDash([]);
+    g.strokeStyle='#555';g.lineWidth=1.5;g.strokeRect(x,L.tankTop,L.tw,L.tankH);g.lineWidth=1;g.beginPath();g.moveTo(x,ycap);g.lineTo(x+L.tw,ycap);g.stroke();
+    // escala PB
+    g.fillStyle='#888';g.font='9px sans-serif';g.textAlign='right';const stp=Vmax>9000?2:1;if(!(s===1&&L.tw<150))for(let pb=0;pb*1000<=Vmax;pb+=stp){const yy=bot-pb*1000*sc;g.fillText(pb+' PB',x-4,yy+3);g.fillRect(x-2,yy,2,1)}
+    // % grande
+    const over=occ>P.lim*Vt,pc=fmt(100*occ/Vt,1)+'%';g.textAlign='center';g.font='bold 22px -apple-system,Segoe UI,sans-serif';g.lineWidth=4;g.strokeStyle='rgba(255,255,255,.85)';
+    const ty=L.tankTop-10;g.strokeText(pc,x+L.tw/2,ty);g.fillStyle=over?'#d0342c':'#1d2430';g.fillText(pc,x+L.tw/2,ty);
+    g.font='bold 12px sans-serif';g.fillStyle=s?'#2f7a5a':'#a5432f';g.fillText(L.tw<150?(s?'WITH RULE':'NO RULE'):(s?'WITH USAGE RULE':'WITHOUT USAGE RULE'),x+L.tw/2,bot+16);
+    g.font='11px sans-serif';g.fillStyle='#6b7280';
+    if(s===0)g.fillText(L.tw<150?'nothing leaves':'nothing leaves: no rule sends data to tape',x+L.tw/2,bot+32);
+    if(VIEW==='linha'){g.font='9.5px sans-serif';g.fillStyle='#9a9a9a';g.fillText(L.tw<150?'estimated split':'split by beamline is estimated',x+L.tw/2,bot+46)}
+  }
+  // fita e Iron Mountain
+  const r1=live[1],tape=Math.max(0,lerpRec(r1,'tapeIni')),out=r1.out[wk],inn=r1.inn[wk],T=L.taub,tb=L.tankTop+L.tankH;
+  const tmax=Math.max(P.Vcap,r1.tape[CAL.H-1]),th=L.tankH*tape/tmax;g.fillStyle='#fbfaf7';g.fillRect(T.x,L.tankTop,T.w,L.tankH);g.fillStyle='#4b4f58';g.fillRect(T.x+1,tb-th,T.w-2,th);
+  g.strokeStyle='#999';g.setLineDash([4,3]);g.strokeRect(T.x,L.tankTop,T.w,L.tankH);g.setLineDash([]);
+  g.textAlign='center';g.fillStyle='#1d2430';g.font='bold 11px sans-serif';g.fillText('TAPE Archive',T.x+T.w/2,L.tankTop-34);g.font='10px sans-serif';g.fillStyle='#6b7280';g.fillText('LTO-9 cartridges',T.x+T.w/2,L.tankTop-21);g.font='10px sans-serif';g.fillStyle='#6b7280';g.fillText('on tape: '+TB(tape),T.x+T.w/2,L.tankTop-8);
+  {const nf=Math.max(0,Math.ceil(tape*P.copias/CAL.fitaTB-1e-6)),custo=nf*P.fitaPreco;g.fillStyle='#1d2430';g.font='bold 11px sans-serif';g.textAlign='center';
+   g.fillText(fmt(nf)+' cartridges',T.x+T.w/2,tb+16);g.font='10.5px sans-serif';g.fillStyle='#6b7280';g.fillText((P.moeda==='BRL'?'R$ ':'US$ ')+(custo>=1e6?fmt(custo/1e6,2)+' M':fmt(custo/1e3,0)+' k'),T.x+T.w/2,tb+30);
+   g.font='9px sans-serif';g.fillText(P.copias>1?'2 copies, media':'1 copy, media',T.x+T.w/2,tb+43);g.fillText('until '+mesAno(wk),T.x+T.w/2,tb+55)}
+  // tubos: ida (grosso) e volta (fino)
+  const rx0=L.tanks[1]+L.tw+3,rx1=T.x-3,thk=v=>2+14*Math.min(1,v/250);
+  const yI=L.tankTop+L.tankH*0.42,yV=L.tankTop+L.tankH*0.72,tI=thk(P.fita),tV=thk(P.volta);
+  g.lineCap='butt';g.strokeStyle='#d8d5cc';g.lineWidth=tI;g.beginPath();g.moveTo(rx0,yI);g.lineTo(rx1,yI);g.stroke();
+  g.lineWidth=tV;g.beginPath();g.moveTo(rx0,yV);g.lineTo(rx1,yV);g.stroke();g.lineWidth=1;g.lineCap='round';
+  const flow=(y,th,amt,cap,dir,col)=>{if(amt<0.01||cap<=0)return;const n=Math.max(1,Math.round(8*Math.min(1,amt/cap))),len=rx1-rx0;g.fillStyle=col;
+    for(let k=0;k<n;k++){let f=((anim*0.5+k/n)%1);if(dir<0)f=1-f;g.beginPath();g.arc(rx0+len*f,y,Math.max(1.5,th/2-1),0,7);g.fill()}};
+  const cart=(x,y,sc,load,col)=>{const w=26*sc,h=11*sc;g.fillStyle='#2f7a5a';roundRect(g,x-w/2,y-h-3*sc,w,h,3*sc);g.fill();
+    g.fillStyle='#333';g.beginPath();g.arc(x-w/3,y-2*sc,2.6*sc,0,7);g.arc(x+w/3,y-2*sc,2.6*sc,0,7);g.fill();
+    if(load){g.fillStyle=col;const nb=Math.max(1,Math.min(4,Math.round(load)));for(let k=0;k<nb;k++)g.fillRect(x-w/2+3*sc+k*5.5*sc,y-h-8*sc,4.5*sc,6*sc)}};
+  const fI=(anim*0.35)%1,fV=(anim*0.25)%1;
+  if(out>0.01)cart(rx0+14+(rx1-rx0-28)*fI,yI-tI/2,1,4*Math.min(1,out/P.fita),'#1d2430');else cart(rx0+14,yI-tI/2,1,0);
+  if(inn>0.01)cart(rx1-12-(rx1-rx0-24)*fV,yV-tV/2,0.75,4*Math.min(1,inn/Math.max(1,P.volta)),'#4aa8d8');
+  g.textAlign='center';g.font='9.5px sans-serif';g.fillStyle='#6b7280';const mx=(rx0+rx1)/2,nar=rx1-rx0<90;
+  g.fillText(nar?'write':'write ≤ '+fmt(P.fita)+' TB/wk',mx,yI-tI/2-20);
+  g.fillText(nar?'recall':'recall ≤ '+fmt(Math.min(P.volta,P.fita))+' TB/wk',mx,yV-tV/2-17);
+  if(!nar)g.fillText('~'+P.atraso+' days',mx,yV+tV/2+11);
+  g.font='10.5px sans-serif';g.fillStyle='#6b7280';
+  g.fillText(out+inn>0.01?('written '+TB(out)+(inn>0.01?' · recalled '+TB(inn):'')+(L.tw<150?'':' this week')):(P.fita>0?'nothing to write':'no drive writing'),L.tanks[1]+L.tw/2,tb+32);
+}
+const GRUPOS=['pesada','mpesada','media','leve','orion'];
+function drawByLine(g,r,x,bot,w,sc){
+  const t=Math.min(CAL.H-1,Math.floor(cur)),f=cur-t,t2=Math.min(CAL.H-1,t+1),dl=new Float64Array(NL),pl=new Float64Array(NL);
+  for(let l=0;l<NL;l++){dl[l]=Math.max(0,r.lD[t*NL+l]*(1-f)+r.lD[t2*NL+l]*f);pl[l]=Math.max(0,r.lP[t*NL+l]*(1-f)+r.lP[t2*NL+l]*f)}
+  let tot=0;for(let l=0;l<NL;l++)tot+=dl[l]+pl[l];const H=tot*sc,top=bot-H;if(tot<=0)return bot;
+  let cx=x;
+  for(const gk of GRUPOS){const ls=[];let gt=0;LINHAS.forEach(([n,pk],l)=>{if(pk===gk){ls.push(l);gt+=dl[l]+pl[l]}});if(gt<=0)continue;
+    const cw=w*gt/tot;let cy=bot;
+    for(const l of ls){const v=dl[l]+pl[l];if(v<=0)continue;const h=H*v/gt,hd=h*dl[l]/v;
+      g.fillStyle=LCOR[l];g.fillRect(cx,cy-hd,cw,hd);g.fillStyle=LCORP[l];g.fillRect(cx,cy-h,cw,h-hd);
+      g.strokeStyle='#fbfaf7';g.lineWidth=1;g.strokeRect(cx,cy-h,cw,h);
+      if(cw<=18&&cw>=9&&h>26){g.save();g.translate(cx+cw/2,cy-h/2);g.rotate(-Math.PI/2);g.textAlign='center';g.textBaseline='middle';g.font='bold '+(cw>=12?9.5:8)+'px sans-serif';
+        g.fillStyle=LDARK[l]&&hd>h*0.5?'#fff':'#13233a';g.fillText(SIG[LINHAS[l][0]],0,0);g.restore()}
+      else if(cw>18&&h>10){g.textAlign='center';g.textBaseline='middle';const lbl=SIG[LINHAS[l][0]];g.font='bold '+(h>15&&cw>26?10:8.5)+'px sans-serif';
+        g.fillStyle=LDARK[l]&&hd>h*0.5?'#fff':'#13233a';const big=h>30&&cw>38;
+        g.fillText(lbl,cx+cw/2,cy-h/2-(big?6:0));if(big){g.font='9.5px sans-serif';g.fillText(TB(v),cx+cw/2,cy-h/2+7)}g.textBaseline='alphabetic'}
+      cy-=h}
+    cx+=cw}
+  return top}
+function vDe(t){return (P.ib2Sem!==null&&t>=P.ib2Sem)?P.V2:P.Vcap}
+function vMax(){return Math.max(P.Vcap,P.ib2Sem!==null?P.V2:0)}
+function roundRect(g,x,y,w,h,r){g.beginPath();g.moveTo(x+r,y);g.arcTo(x+w,y,x+w,y+h,r);g.arcTo(x+w,y+h,x,y+h,r);g.arcTo(x,y+h,x,y,r);g.arcTo(x,y,x+w,y,r);g.closePath()}
+
+// ---------- cartões ----------
+function card(k,v,s,cls){return `<div class="card"><div class="k">${k}</div><div class="v ${cls||''}">${v}</div><div class="s">${s||''}</div></div>`}
+function updateCards(){
+  if(!RES)return;const wk=Math.min(CAL.H-1,Math.floor(cur));
+  for(let s=0;s<2;s++){const r=RES.live[s],cs=RES.cstat[s],occ=r.occ[wk],Vt=r.V[wk],over=occ>P.lim*Vt;let h='';
+    h+=card('Occupation now',fmt(100*occ/Vt,1)+'%',TB(occ)+' of '+TB(Vt)+(P.ib2Sem!==null&&wk>=P.ib2Sem?' (Ibirá 2)':''),over?'bad':'');
+    const lp=fmt(P.lim*100)+'%';
+    h+=cs.prob>0?card('Red line ('+lp+')',cs.med===0?'already crossed':'~'+mesAno(cs.med),'crossed in '+fmt(100*cs.prob)+'% of simulated futures',cs.prob>0.5?'bad':''):card('Red line ('+lp+')','not crossed','in no simulated future until '+ANOFIM,'good');
+    {const al=alerta(cs);h+=card('Purchase alert',al.v,al.s,al.cls)}
+    const lost=r.lost[wk];
+    h+=card('Emergency cleanups',fmt(r.fax[wk]),r.fax[wk]?TB(r.susto[wk])+' of proc/ deleted without notice'+(lost>0?' · <b class="bad">'+TB(lost)+' of raw data not written</b>':''):'none so far',r.fax[wk]?'bad':'good');
+    if(s===0){h+=card('Tape queue','—','does not exist: nothing leaves the disk');h+=card('Recall requests','—','nothing on tape')}
+    else{let z=null;const q0=Math.max(...r.queue.slice(0,P.aviso+2));for(let t=1;t<CAL.H;t++)if(r.queue[t]<0.02*q0+1){z=t;break}
+      h+=card('Tape queue',TB(r.queue[wk]),z!==null?'empty by ~'+mesAno(z):'not cleared until '+ANOFIM+': not enough throughput',z===null?'bad':'');
+      h+=card('Recall requests',fmt(r.volta[wk]),(r.volta[wk]?'mean wait '+fmt(r.esp[wk]*7)+' days':'none yet')+(r.pendTB[wk]>0.5?' · <b class="'+(r.pendTB[wk]>3*P.volta?'bad':'')+'">'+TB(r.pendTB[wk])+' waiting for recall</b>':''))}
+    h+=card('Proposals that lost proc/ without notice',fmt(r.vit[wk]),r.vit[wk]?'largest first: whoever processed more pays for the cleanup':(s?'proc/ only leaves at the end of retention, with notice':'none so far'),r.vit[wk]?'bad':'good');
+    $('cards'+s).innerHTML=h}
+}
+function alerta(cs){if(cs.prob<0.5||cs.med===null)return{v:'no alert',s:'crossed in fewer than half of the futures until '+ANOFIM,cls:'good',w:null};
+  const w=cs.med-P.alertaSem;return w<=0?{v:'decide now',s:'the 1-year lead time has passed: crossing ~'+mesAno(cs.med),cls:'bad',w:0}:{v:'by ~'+mesAno(w),s:'1 year before crossing '+fmt(P.lim*100)+'% (~'+mesAno(cs.med)+')',cls:w<52?'bad':'',w}}
+function banner(){if(!RES)return;const a=RES.cstat.map(alerta),nm=['without usage rule','with usage rule'];
+  const txt=a.map((x,s)=>`<b>${nm[s]}</b>: ${x.w===null?'no alert until '+ANOFIM:x.w===0?'<span class="bad">decide now</span> (crossing ~'+mesAno(RES.cstat[s].med)+')':'decide by <b>~'+mesAno(x.w)+'</b> (crossing ~'+mesAno(RES.cstat[s].med)+')'}`).join(' &nbsp;·&nbsp; ');
+  $('alerta').innerHTML=`<span class="alic">⚠</span> <b>Storage purchase</b> (alert 1 year before ${fmt(P.lim*100)}% of the ${fmt(P.Vcap/1000,2)} PB capacity): ${txt}`}
+function foot(){const R=RES,C=R.C;$('foot').innerHTML=`Calibration: the beamlines produce today ≈ <b>${fmt(C.R0,1)} TB/week</b> (raw + proc/), ≈ ${fmt(R.nProp,1)} proposals/week. To accumulate today's ${TB(CAL.usoLinhas)} in ${fmt(P.idade,1)} years, the past ${C.dobraPassado?'doubled every ~'+fmt(C.dobraPassado,1)+' years':'did not grow (constant or decreasing rate)'}. From now on: doubling every ${fmt(P.dobraF,1)} years (assumption). Changing any control reruns the simulation from today.`}
+
+// ---------- gráfico de ocupação ----------
+function drawChart(){
+  if(!RES)return;const {g,w,h}=fit($('chart'),LAY.chartH),H=CAL.H,ml=44,mr=10,mt=10,mb=24,pw=w-ml-mr,ph=h-mt-mb,Vm=vMax();
+  let lo=Vm;for(const b of RES.band)for(let t=0;t<H;t++)lo=Math.min(lo,b.lo[t]);const y0=Math.max(0,Math.floor(lo/500-0.5)*500),y1=Vm*1.03;
+  const X=t=>ml+pw*t/(H-1),Y=v=>mt+ph*(1-(v-y0)/(y1-y0));
+  g.clearRect(0,0,w,h);g.font='10px sans-serif';g.fillStyle='#888';g.strokeStyle='#eee';g.textAlign='right';
+  const st=(y1-y0)>8000?2000:(y1-y0)>3000?1000:500;
+  for(let v=Math.ceil(y0/st)*st;v<=y1;v+=st){const y=Y(v);g.beginPath();g.moveTo(ml,y);g.lineTo(w-mr,y);g.stroke();g.fillText(fmt(v/1000,st<1000?1:0)+' PB',ml-4,y+3)}
+  g.textAlign='center';yearTicks(t=>{g.fillText(anoDe(t),X(t),h-6);g.strokeStyle='#eee';g.beginPath();g.moveTo(X(t),mt);g.lineTo(X(t),mt+ph);g.stroke()});
+  // capacidade e limite
+  const step=(f,col,dash,lw)=>{g.strokeStyle=col;g.setLineDash(dash);g.lineWidth=lw;g.beginPath();for(let t=0;t<H;t++){const v=f(vDe(t));if(t>0)g.lineTo(X(t),Y(f(vDe(t-1))));g.lineTo(X(t),Y(v))}g.stroke();g.setLineDash([])};
+  step(v=>v,'#555',[],1.5);step(v=>P.lim*v,'#d0342c',[6,4],1.5);
+  const col=['165,67,47','47,122,90'];
+  RES.band.forEach((b,s)=>{g.fillStyle=`rgba(${col[s]},.18)`;g.beginPath();for(let t=0;t<H;t++)g.lineTo(X(t),Y(b.hi[t]));for(let t=H-1;t>=0;t--)g.lineTo(X(t),Y(b.lo[t]));g.fill();
+    g.strokeStyle=`rgb(${col[s]})`;g.lineWidth=2;g.beginPath();for(let t=0;t<H;t++)g.lineTo(X(t),Y(b.md[t]));g.stroke()});
+  g.fillStyle='#d0342c';g.textAlign='left';g.font='10px sans-serif';g.fillText('limit ('+fmt(P.lim*100)+'%)',ml+3,Y(P.lim*P.Vcap)+11);g.fillStyle='#555';g.fillText('capacity',ml+3,Y(P.Vcap)-3);
+  RES.cstat.forEach((cs,s)=>{const a=alerta(cs);if(a.w===null)return;const xa=X(Math.max(0,a.w)),xm=X(cs.med);
+    g.fillStyle=`rgba(${col[s]},.08)`;g.fillRect(xa,mt,Math.max(1,xm-xa),ph);
+    g.strokeStyle=`rgb(${col[s]})`;g.setLineDash([3,3]);g.lineWidth=1.5;g.beginPath();g.moveTo(xa,mt);g.lineTo(xa,mt+ph);g.stroke();g.setLineDash([]);
+    g.fillStyle=`rgb(${col[s]})`;g.font='bold 10px sans-serif';g.textAlign='left';g.fillText('⚠ '+(a.w===0?'now':mesAno(a.w)),xa+3,mt+ph-6-14*s)});
+  const xc=X(cur);g.strokeStyle='#1d2430';g.lineWidth=1;g.beginPath();g.moveTo(xc,mt);g.lineTo(xc,mt+ph);g.stroke();
+  RES.live.forEach((r,s)=>{g.fillStyle=`rgb(${col[s]})`;g.beginPath();g.arc(xc,Y(lerpRec(r,'occ')),4,0,7);g.fill()});
+}
+
+function drawFlows(){
+  if(!RES)return;const {g,w,h}=fit($('flows'),LAY.chartH),H=CAL.H,ml=40,mr=10,mt=8,mb=22,pw=w-ml-mr,ph=h-mt-mb,r=RES.live[1];
+  const ma=a=>{const o=new Float64Array(H);for(let t=0;t<H;t++){let s=0,n=0;for(let k=Math.max(0,t-3);k<=t;k++){s+=a[k];n++}o[t]=s/n}return o};
+  const S=[[ma(r.jd),'#2f6fb0',[],2,'input J_D(t)'],[ma(r.venc),'#2f6fb0',[5,3],2,'expiring J_D(t−R)'],[ma(r.out),'#1d2430',[],2,'to tape φ_w'],[ma(r.inn),'#4aa8d8',[],1.5,'recalled φ_b']];
+  let ym=P.fita*1.1;for(const q of S)for(let t=0;t<H;t++)ym=Math.max(ym,q[0][t]*1.1);ym=Math.max(10,ym);
+  const X=t=>ml+pw*t/(H-1),Y=v=>mt+ph*(1-v/ym);
+  g.clearRect(0,0,w,h);g.font='10px sans-serif';g.fillStyle='#888';g.strokeStyle='#eee';g.textAlign='right';
+  const st=ym>300?100:ym>120?50:ym>50?20:10;for(let v=0;v<=ym;v+=st){const y=Y(v);g.beginPath();g.moveTo(ml,y);g.lineTo(w-mr,y);g.stroke();g.fillText(fmt(v),ml-4,y+3)}
+  g.textAlign='center';yearTicks(t=>{g.fillText(anoDe(t),X(t),h-5);g.strokeStyle='#eee';g.beginPath();g.moveTo(X(t),mt);g.lineTo(X(t),mt+ph);g.stroke()});
+  g.strokeStyle='#d0342c';g.setLineDash([6,4]);g.lineWidth=1.5;g.beginPath();g.moveTo(ml,Y(P.fita));g.lineTo(w-mr,Y(P.fita));g.stroke();g.setLineDash([]);
+  for(const [a,c,d,lw] of S){g.strokeStyle=c;g.setLineDash(d);g.lineWidth=lw;g.beginPath();for(let t=0;t<H;t++)g.lineTo(X(t),Y(a[t]));g.stroke();g.setLineDash([])}
+  const xc=X(cur);g.strokeStyle='#1d2430';g.lineWidth=1;g.beginPath();g.moveTo(xc,mt);g.lineTo(xc,mt+ph);g.stroke();
+
+}
+function bolso(){if(!RES)return;const r=RES.live[1],H=CAL.H,J=RES.inD+RES.inP+P.outrosJ;
+  const wl=(P.lim*P.Vcap-CAL.usado0)/J;
+  let vs=0,vi=0,n=Math.min(26,H);for(let t=0;t<n;t++){vs+=r.venc[t];vi+=r.inn[t]}const venc=vs/n,phv=vi/n;
+  const F0=r.queue[0]+r.out[0],folga=P.fita-phv-venc,tz=folga>0?F0/folga:Infinity;
+  const row=(k,v)=>`<div class="bolso-row"><span>${k}</span><b>${v}</b></div>`;
+  $('bolso').innerHTML=
+   '<p class="mp"><b>Without a usage rule</b> nothing leaves, so the time to the red line is just free space ÷ input:</p>'+
+   `<div class="eq" style="text-align:center">${'<span class="frac"><span>α<i>V</i> − <i>U</i><sub>0</sub></span><span><i>J<sub>D</sub></i> + <i>J<sub>P</sub></i></span></span>'} = <span class="frac"><span>${fmt(P.lim*P.Vcap)} − ${fmt(CAL.usado0)}</span><span>${fmt(RES.inD,1)} + ${fmt(RES.inP,1)}</span></span> ≈ <b>${fmt(wl)} weeks</b> (~${mesAno(Math.round(wl))})</div>`+
+   '<p class="mp" style="margin-top:8px"><b>With the usage rule</b> the initial queue <i>F</i><sub>0</sub> drains with the spare tape capacity:</p>'+
+   row('initial queue F₀ (already expired today)',TB(F0))+row('tape capacity W',fmt(P.fita)+' TB/week')+row('recalls φ_b (mean)',fmt(phv,1)+' TB/week')+row('expiring per week J_D(t−R) (mean)',fmt(venc,1)+' TB/week')+
+   `<div class="eq" style="text-align:center;margin-top:8px"><span class="frac"><span><i>F</i><sub>0</sub></span><span><i>W</i> − φ<sub>b</sub> − <i>J<sub>D</sub></i>(<i>t</i>−<i>R</i>)</span></span> = <span class="frac"><span>${fmt(F0)}</span><span>${fmt(P.fita)} − ${fmt(phv,0)} − ${fmt(venc,0)}</span></span> ≈ <b>${isFinite(tz)?fmt(tz)+' weeks':'never'}</b></div>`+
+   `<p class="mp">${folga>0?'The tape writes '+fmt(P.fita/Math.max(1,venc),1)+'× what expires per week: once the queue is empty, it has plenty of spare capacity.':'The tape cannot even keep up with what expires each week: the queue grows without bound. Add drives or improve efficiency.'} Mean values; the simulation draws around them.</p>`}
+const pop=$('pop');
+$('plant').addEventListener('click',e=>{const rc=$('plant').getBoundingClientRect(),x=e.clientX-rc.left,y=e.clientY-rc.top;
+  const i=LAY.boxes.findIndex(b=>x>=b.x&&x<=b.x+b.w&&y>=b.y&&y<=b.y+b.h);if(i<0){pop.style.display='none';return}showPop(i,rc)});
+function showPop(i,rc){const [nm,pk]=LINHAS[i],pf=CAL.perfis[pk],b=LAY.boxes[i],wk=Math.min(CAL.H-1,Math.floor(cur)),isO=pk==='orion',off=isO&&(P.orionSem===null||wk<P.orionSem);
+  const occ=s=>{const r=RES.live[s];return r.lD[wk*NL+i]+r.lP[wk*NL+i]},med=GRAF[nm];
+  const opts=['pesada','mpesada','media','leve'].map(k=>`<option value="${k}" ${k===pk?'selected':''}>${CAL.perfis[k].nome} · quota ${fmt(P.qp[k],P.qp[k]<1?1:0)} TB</option>`).join('');
+  pop.innerHTML=`<h4>${SIG[nm]} · ${nm}</h4>`+(isO?`<div class="hint">Orion profile (heavy imaging) · quota ${fmt(P.qp.orion,0)} TB</div>`:`<div class="hint" style="margin-top:4px">profile (sets the quota and the typical proposal size):</div><select id="pp" style="width:100%;margin-top:2px">${opts}</select>`)+
+   (off&&occ(0)<0.5?`<div style="margin-top:6px">${P.orionSem===null?'Not in the simulation (Orion not included).':'Starts operating on '+dataSem(P.orionSem)+', ramping up logistically to '+fmt(P.orionTB,1)+' TB/week (10%→90% in '+P.orionRampa+' years).'}</div>`:
+   `<div style="margin-top:6px">${isO?'full rate (assumption): <b>'+fmt(P.orionTB,1)+' TB/week</b>':med!==undefined?'measured rate: <b>'+fmt(med,med<0.1?3:2)+' TB/week</b><br><span class="hint">raw + proc/</span>':'measured rate: below 0.005 TB/week'}</div>
+    <div style="margin-top:6px">occupies on ${dataSem(wk)}:<br>without usage rule <b>${TB(occ(0))}</b> · with usage rule <b>${TB(occ(1))}</b></div>
+    <div class="hint" style="margin-top:4px">today's stock per beamline is estimated</div>`)+
+   `<div class="row"><button id="bx">close</button></div>`;
+  pop.style.display='block';const px=rc.left+window.scrollX+Math.min(b.x,rc.width-250),py=rc.top+window.scrollY+b.y+b.h+6;pop.style.left=px+'px';pop.style.top=py+'px';
+  $('bx').onclick=()=>pop.style.display='none';
+  if(!isO)$('pp').onchange=e=>{LINHAS[i][1]=e.target.value;recolor();recompute();showPop(i,rc)}}
+
+// ---------- laço ----------
+function frame(ts){const dt=lastTs===null?0:Math.min(0.1,(ts-lastTs)/1000);lastTs=ts;anim+=dt;
+  if(playing){cur+=dt*speed;if(cur>=CAL.H-1){cur=CAL.H-1;playing=false;$('play').textContent='▶ Run'}$('scrub').value=cur}
+  const wk=Math.floor(cur);if(wk!==lastWeek){if(playing&&RES)spawn(wk);lastWeek=wk;updateCards()}
+  stepDrops(dt);$('date').textContent=dataSem(cur);drawPlant();if(RES){drawChart();drawFlows();drawLineChart()}requestAnimationFrame(frame)}
+
+// ================= seleção de linhas (só visual) =================
+const SEL=new Uint8Array(NL);let LMODE='sep';
+(function(){['mogno','caterete','carnauba','manaca'].forEach(n=>{const i=LINHAS.findIndex(x=>x[0]===n);if(i>=0)SEL[i]=1})})();
+function buildChips(){const c=$('lchips');c.innerHTML='';LINHAS.forEach(([n,pk],i)=>{const b=document.createElement('span');b.className='lchip'+(SEL[i]?' on':'');b.textContent=SIG[n]||n;
+  b.title=n+' ('+CAL.perfis[pk].nome+')';if(SEL[i]){b.style.background=LCOR[i];b.style.color=LDARK[i]?'#fff':'#13233a'}
+  b.onclick=()=>{SEL[i]^=1;buildChips();drawLineChart()};c.appendChild(b)})}
+document.querySelectorAll('.lbtns button').forEach(b=>b.onclick=()=>{const p=b.dataset.p;
+  if(p==='todas')SEL.fill(1);else if(p==='nenhuma')SEL.fill(0);
+  else if(p==='pesadas')LINHAS.forEach(([n,pk],i)=>SEL[i]=pk==='pesada'?1:0);
+  else if(p==='top4'&&RES){const r=RES.live[0],t=CAL.H-1,v=LINHAS.map((_,l)=>r.lD[t*NL+l]+r.lP[t*NL+l]);const ord=v.map((_,l)=>l).sort((a,b)=>v[b]-v[a]);SEL.fill(0);ord.slice(0,4).forEach(l=>SEL[l]=1)}
+  buildChips();drawLineChart()});
+document.querySelectorAll('.seg2 button').forEach(b=>b.onclick=()=>{LMODE=b.dataset.m;document.querySelectorAll('.seg2 button').forEach(x=>x.classList.toggle('on',x===b));drawLineChart()});
+function drawLineChart(){
+  if(!RES||!RES.live||!RES.live[0].lD)return;const {g,w,h}=fit($('linechart'),230),H=CAL.H,ml=48,mr=64,mt=10,mb=24,pw=w-ml-mr,ph=h-mt-mb;
+  const sel=[];for(let l=0;l<NL;l++)if(SEL[l])sel.push(l);
+  g.clearRect(0,0,w,h);g.font='10px sans-serif';
+  if(!sel.length){g.fillStyle='#888';g.textAlign='center';g.fillText('no beamline selected',w/2,h/2);$('lc-hint').textContent='';return}
+  const series=[];
+  const val=(r,t,l)=>Math.max(0,r.lD[t*NL+l]+r.lP[t*NL+l]);
+  if(LMODE==='soma'){const a=[0,1].map(s=>{const y=new Float64Array(H);for(let t=0;t<H;t++)for(const l of sel)y[t]+=val(RES.live[s],t,l);return y});series.push({col:'#1d2430',lbl:sel.length===NL?'all':sel.length+' beamlines',y:a})}
+  else for(const l of sel){const a=[0,1].map(s=>{const y=new Float64Array(H);for(let t=0;t<H;t++)y[t]=val(RES.live[s],t,l);return y});series.push({col:LCOR[l],lbl:SIG[LINHAS[l][0]],y:a})}
+  let ymax=1;for(const se of series)for(const y of se.y)for(let t=0;t<H;t++)ymax=Math.max(ymax,y[t]);ymax*=1.06;
+  const pb=ymax>=1500,X=t=>ml+pw*t/(H-1),Y=v=>mt+ph*(1-v/ymax);
+  const raw=ymax/4,mag=Math.pow(10,Math.floor(Math.log10(raw))),st=[1,2,5,10].map(k=>k*mag).find(x=>x>=raw);
+  g.strokeStyle='#eee';g.fillStyle='#888';g.textAlign='right';
+  for(let v=0;v<=ymax;v+=st){const y=Y(v);g.beginPath();g.moveTo(ml,y);g.lineTo(ml+pw,y);g.stroke();g.fillText(pb?fmt(v/1000,1)+' PB':fmt(v,v<10?1:0)+' TB',ml-4,y+3)}
+  g.textAlign='center';yearTicks(t=>{g.fillText(anoDe(t),X(t),h-6);g.strokeStyle='#eee';g.beginPath();g.moveTo(X(t),mt);g.lineTo(X(t),mt+ph);g.stroke()});
+  const labs=[];
+  for(const se of series){[0,1].forEach(s=>{g.strokeStyle=se.col;g.lineWidth=s===0?2:1.8;g.setLineDash(s===0?[]:[5,4]);g.beginPath();for(let t=0;t<H;t++)g.lineTo(X(t),Y(se.y[s][t]));g.stroke()});g.setLineDash([]);
+    labs.push({y:Y(se.y[0][H-1]),lbl:se.lbl+' '+(pb||se.y[0][H-1]>=1000?fmt(se.y[0][H-1]/1000,1)+' PB':fmt(se.y[0][H-1],0)+' TB'),col:se.col})}
+  labs.sort((a,b)=>a.y-b.y);for(let i=1;i<labs.length;i++)if(labs[i].y-labs[i-1].y<11)labs[i].y=labs[i-1].y+11;
+  g.textAlign='left';g.font='bold 10px sans-serif';for(const lb of labs){g.fillStyle=lb.col;g.fillText(lb.lbl,ml+pw+4,lb.y+3)}
+  const xc=X(cur);g.strokeStyle='#1d2430';g.lineWidth=1;g.beginPath();g.moveTo(xc,mt);g.lineTo(xc,mt+ph);g.stroke();
+  $('lc-hint').textContent='Labels on the right: disk occupied by the beamline at the end of '+ANOFIM+' without usage rule. This is a single future (the same as in the tanks), so the steps are large proposals drawn at random. Without a usage rule, once the disk hits the limit the emergency cleanup deletes the largest proc/ first: this is why heavy beamlines shrink while light ones keep growing.';
+}
+function resize(){layout();drawChart();drawFlows();drawLineChart()}
+window.addEventListener('resize',resize);
+labels();layout();buildChips();capCheck();requestAnimationFrame(frame);
+</script>
+</body>
+</html>
