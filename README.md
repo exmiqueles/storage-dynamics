@@ -9,7 +9,7 @@ Ibirá, the central storage of Sirius (CNPEM, Brazil), and compares the
 evolution of the disk with and without a usage rule (retention, quotas on
 processed data, tape archiving).
 
-**Open it:** https://USER.github.io/REPO/
+**Open it:** https://exmiqueles.github.io/storage-dynamics/
 
 It is a single self-contained HTML file (`index.html`): no installation and no
 external dependencies. It can also be downloaded and opened offline in any
