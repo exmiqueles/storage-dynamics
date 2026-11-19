@@ -350,9 +350,9 @@ footer{font-size:11.5px;color:var(--mute);margin-top:10px}
       <h3 class="mh3">How the simulation generates the data</h3>
       <ul class="mp" style="padding-left:16px;margin:4px 0">
         <li>Proposal by proposal, week by week. The equations above are the average of this.</li>
-        <li>Each beamline receives a random number of proposals per week. The mean matches, in TB/week, the measured rate of the beamline; the profile sets the typical proposal size. The mean grows over time.</li>
+        <li>Each beamline receives a random number of proposals per week. The mean is chosen so that the proposals, raw + proc/, match the measured rate of the beamline in TB/week; the profile sets the typical proposal size. The mean grows over time.</li>
         <li>Each proposal has a random raw size and a proc/ that grows over ~6 weeks; sizes and proc/÷raw ratios per profile come from the real proposals (commissioning proposals are larger, with inflated proc/).</li>
-        <li>The past is generated so that the history reproduces today's usage of the synchrotron share (<span class="u0txt">3.24</span> PB by default: beamlines + general, split among the beamlines).</li>
+        <li>The past is generated so that the history reproduces today's usage of the beamlines (2.68 PB by default). The general areas (0.56 PB) are a fixed stock, outside the usage rule, and do not grow.</li>
         <li>Recall requests are drawn per proposal on tape, with the weekly chance set in the assumptions.</li>
         <li>Week 0 is today: both tanks start from the same state, and new proposals and the usage rules act from week 1 on.</li>
         <li>20 futures are simulated; the band in the occupation chart covers 80% of them.</li>
@@ -367,7 +367,7 @@ footer{font-size:11.5px;color:var(--mute);margin-top:10px}
 // ================= CALIBRAÇÃO (mexa aqui) =================
 const CAL={
   // decimal TB. The capacity of the synchrotron share is editable (P.Vcap).
-  usoLinhas:3235, usoGeral:0, usoOutros:0,  // today: 2.68 PB beamlines + 0.56 PB general
+  usoLinhas:2675, usoGeral:560, usoOutros:0,  // today: 2.68 PB beamlines + 0.56 PB general (fixed stock, outside the usage rule)
   usado0:3235,                                // ocupação total hoje (a rampa do Orion é P.orionRampa, logística)
   inicio:new Date(2026,10,12), H:477,         // semana 0 = hoje (12/11/2026); 477 semanas ≈ fim de 2035
   rampaCentroSem:6, rampaLarguraSem:2,        // proc/ cresce em rampa logística depois da medida
@@ -418,14 +418,20 @@ function expect(pk,m,comm){const key=pk+m+comm;if(EXP[key])return EXP[key];const
 // ================= calibração: Grafana (ritmo por linha) + ocupação de hoje =================
 function mix(pk){const pf=CAL.perfis[pk],e=expect(pk,1,false),ec=expect(pk,1,true),wc=pf.comm/(pf.rate+pf.comm);return{wc,d:(1-wc)*e.d+wc*ec.d,dr:(1-wc)*e.dr+wc*ec.dr}}
 function calib(P){
-  const T0=Math.round(P.idade*52),lam=new Float64Array(NL),lamS=new Float64Array(NL);
-  let R0=0,Ws=0,JD=0,Edr=0;
-  for(let l=0;l<NL;l++){const pk=LINHAS[l][1];if(pk==='orion')continue;const tx=taxaLinha(l),mx=mix(pk);R0+=tx;Ws+=tx+0.02;lam[l]=(1-P.fp)*tx/mx.d;JD+=(1-P.fp)*tx;Edr+=lam[l]*mx.dr}
-  const sR=(P.fp/(1-P.fp))*JD/Edr;
-  for(let l=0;l<NL;l++){const pk=LINHAS[l][1];if(pk==='orion'){lam[l]=(1-P.fp)*P.orionTB/mix(pk).d;continue}lamS[l]=(1-P.fp)*(taxaLinha(l)+0.02)*(R0/Ws)/mix(pk).d}
+  // each beamline matches its measured rate with the total (raw + proc/) of its proposals:
+  // lam = J / (E[D] + sR E[D r]), with a single scale sR on proc/ chosen so that the
+  // processed fraction of the total input of the current beamlines is fp
+  const T0=Math.round(P.idade*52),lam=new Float64Array(NL),lamS=new Float64Array(NL),M=LINHAS.map(x=>mix(x[1]));
+  let R0=0,Ws=0;
+  for(let l=0;l<NL;l++){if(LINHAS[l][1]==='orion')continue;const tx=taxaLinha(l);R0+=tx;Ws+=tx+0.02}
+  const fpOf=sR=>{let a=0;for(let l=0;l<NL;l++){if(LINHAS[l][1]==='orion')continue;const m=M[l];a+=taxaLinha(l)*sR*m.dr/(m.d+sR*m.dr)}return a/R0};
+  let lo=1e-6,hi=100;for(let k=0;k<100;k++){const m=Math.sqrt(lo*hi);if(fpOf(m)<P.fp)lo=m;else hi=m}const sR=Math.sqrt(lo*hi);
+  for(let l=0;l<NL;l++){const m=M[l],e=m.d+sR*m.dr;
+    if(LINHAS[l][1]==='orion'){lam[l]=P.orionTB/e;continue}
+    lam[l]=taxaLinha(l)/e;lamS[l]=(taxaLinha(l)+0.02)*(R0/Ws)/e}
   // crescimento implícito do passado: Σ_{t=-T0}^{-1} e^{g t} = estoque das linhas / ritmo de hoje
   const alvo=CAL.usoLinhas/R0,S=g=>{let x=0;for(let t=-T0;t<0;t++)x+=Math.exp(g*t);return x};
-  let lo=-0.05,hi=0.05;for(let k=0;k<60;k++){const m=(lo+hi)/2;if(S(m)>alvo)lo=m;else hi=m}const g=(lo+hi)/2;
+  let lo2=-0.05,hi2=0.05;for(let k=0;k<60;k++){const m=(lo2+hi2)/2;if(S(m)>alvo)lo2=m;else hi2=m}const g=(lo2+hi2)/2;
   return {T0,g,R0,lam,lamS,sR,dobraPassado:g>1e-5?Math.LN2/g/52:null};
 }
 const RTC={};function rampTable(n){if(RTC[n])return RTC[n];const a=new Float64Array(n);for(let k=0;k<n;k++)a[k]=ramp(k);return RTC[n]=a}
@@ -551,13 +557,13 @@ function labels(){
   $('o-fp').textContent=fmt(P.fp*100)+'%';$('o-aviso').textContent=P.aviso+' wk';$('o-pv').textContent=fmt(P.pVolta*100,1)+'%';
 }
 for(const k in P.qp)$('q-'+k).addEventListener('input',e=>{P.qp[k]=+e.target.value;labels();schedule()});
-function capCheck(){const v=+$('vcap').value,u=+$('vuso').value,ok=v>0&&u>0&&u<v;
+function capCheck(){const v=+$('vcap').value,u=+$('vuso').value,ok=v>0&&u*1000>CAL.usoGeral&&u<v;
   $('h-cap').classList.toggle('bad',!ok);
-  if(!ok){$('h-cap').textContent='used must be smaller than total';$('o-livre').textContent='';return}
+  if(!ok){$('h-cap').textContent='used must be smaller than total and larger than the general areas ('+fmt(CAL.usoGeral/1000,2)+' PB)';$('o-livre').textContent='';return}
   $('h-cap').textContent=(Math.abs(v-4.47)<1e-9&&Math.abs(u-3.24)<1e-9)?'default: 2.68 PB beamlines + 0.56 general':'default: 4.47 total, 3.24 used';
   $('o-livre').textContent=fmt(v-u,2)+' PB free';
   document.querySelectorAll('.u0txt').forEach(e=>e.textContent=fmt(u,2));
-  P.Vcap=v*1000;CAL.usoLinhas=CAL.usado0=u*1000;schedule()}
+  P.Vcap=v*1000;CAL.usado0=u*1000;CAL.usoLinhas=CAL.usado0-CAL.usoGeral;schedule()}
 $('vcap').addEventListener('input',capCheck);$('vuso').addEventListener('input',capCheck);
 $('preco').addEventListener('input',e=>{P.fitaPreco=Math.max(0,+e.target.value||0)});$('moeda').onchange=e=>{P.moeda=e.target.value};$('copias').onchange=e=>{P.copias=+e.target.value};
 for(const [id,key] of Object.entries(sliders)){$(id).addEventListener('input',e=>{P[key]=+e.target.value;labels();schedule()})}
