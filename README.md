@@ -15,4 +15,8 @@ It is a single self-contained HTML file (`index.html`): no installation and no
 external dependencies. It can also be downloaded and opened offline in any
 browser.
 
+The code of the widget was written with the assistance of Claude (Anthropic), 
+a large language model, from the equations and the calibration defined by the author, 
+who checked the implementation against the model of Section 4 and is responsible for it.
+
 Released under the MIT licence.
